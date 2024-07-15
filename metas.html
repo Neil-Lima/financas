@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metas - Finanças Pessoais</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: 0 2px 5px 0 rgba(0,0,0,.05), 2px 0 5px 0 rgba(0,0,0,.05);
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .sidebar .nav-link {
+            font-weight: 500;
+            color: var(--bs-body-color);
+            padding: 15px 25px;
+            border-left: 4px solid transparent;
+            transition: 0.3s ease;
+        }
+        .sidebar .nav-link:hover {
+            background-color: var(--bs-tertiary-bg);
+            border-left: 4px solid var(--bs-primary);
+        }
+        .sidebar .nav-link.active {
+            color: var(--bs-primary);
+            background-color: var(--bs-secondary-bg);
+            border-left: 4px solid var(--bs-primary);
+        }
+        .sidebar .nav-link i {
+            margin-right: 10px;
+        }
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+        }
+        .navbar .navbar-toggler {
+            top: .25rem;
+            right: 1rem;
+        }
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,.05);
+        }
+        .btn-primary {
+            background-color: var(--bs-primary);
+            border-color: var(--bs-primary);
+        }
+        .btn-primary:hover {
+            background-color: var(--bs-primary-dark);
+            border-color: var(--bs-primary-dark);
+        }
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .slider .fa-sun {
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            color: #fff;
+        }
+        .slider .fa-moon {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            color: #fff;
+        }
+        .progress {
+            height: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar navbar-expand-md navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">Finanças Pessoais</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <input class="form-control form-control-dark w-100" type="text" placeholder="Pesquisar" aria-label="Search">
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <label class="theme-switch" for="themeSwitch">
+                    <input type="checkbox" id="themeSwitch">
+                    <span class="slider">
+                        <i class="fas fa-sun"></i>
+                        <i class="fas fa-moon"></i>
+                    </span>
+                </label>
+            </div>
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="#">Sair</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="fas fa-home"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="fas fa-exchange-alt"></i>
+                                Transações
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="fas fa-wallet"></i>
+                                Contas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="fas fa-chart-pie"></i>
+                                Orçamentos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="fas fa-chart-line"></i>
+                                Relatórios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="#">
+                                <i class="fas fa-bullseye"></i>
+                                Metas
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+                    <h1 class="h2">Metas Financeiras</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#novaMetaModal">
+                            <i class="fas fa-plus"></i> Nova Meta
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row row-cols-1 row-cols-md-2 g-4">
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">Fundo de Emergência</h5>
+                                <p class="card-text">Meta: R$ 10.000,00</p>
+                                <p class="card-text">Progresso: R$ 5.000,00 (50%)</p>
+                                <div class="progress mb-3">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Editar</button>
+                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">Viagem de Férias</h5>
+                                <p class="card-text">Meta: R$ 5.000,00</p>
+                                <p class="card-text">Progresso: R$ 2.000,00 (40%)</p>
+                                <div class="progress mb-3">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Editar</button>
+                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">Novo Carro</h5>
+                                <p class="card-text">Meta: R$ 30.000,00</p>
+                                <p class="card-text">Progresso: R$ 7.500,00 (25%)</p>
+                                <div class="progress mb-3">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Editar</button>
+                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Nova Meta -->
+    <div class="modal fade" id="novaMetaModal" tabindex="-1" aria-labelledby="novaMetaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="novaMetaModalLabel">Nova Meta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="mb-3">
+                            <label for="nomeMeta" class="form-label">Nome da Meta</label>
+                            <input type="text" class="form-control" id="nomeMeta" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="valorMeta" class="form-label">Valor da Meta</label>
+                            <input type="number" class="form-control" id="valorMeta" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="dataLimite" class="form-label">Data Limite</label>
+                            <input type="date" class="form-control" id="dataLimite" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="descricaoMeta" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricaoMeta" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Função para alternar o tema
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeSwitch = document.getElementById('themeSwitch');
+            
+            if (themeSwitch.checked) {
+                html.setAttribute('data-bs-theme', 'dark');
+                document.querySelector('.navbar').classList.remove('bg-light');
+                document.querySelector('.navbar').classList.add('bg-dark');
+                document.querySelector('.sidebar').classList.remove('bg-light');
+                document.querySelector('.sidebar').classList.add('bg-dark');
+            } else {
+                html.setAttribute('data-bs-theme', 'light');
+                document.querySelector('.navbar').classList.remove('bg-dark');
+                document.querySelector('.navbar').classList.add('bg-light');
+                document.querySelector('.sidebar').classList.remove('bg-dark');
+                document.querySelector('.sidebar').classList.add('bg-light');
+            }
+        }
+
+        // Adicionar evento de mudança ao interruptor de tema
+        document.getElementById('themeSwitch').addEventListener('change', toggleTheme);
+
+        // Verificar o tema preferido do usuário
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.getElementById('themeSwitch').checked = true;
+            toggleTheme();
+        }
+
+        // Ouvir mudanças nas preferências de tema do sistema
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            document.getElementById('themeSwitch').checked = event.matches;
+            toggleTheme();
+        });
+
+        // Tornar o site responsivo
+        function adjustLayout() {
+            const width = window.innerWidth;
+            const sidebar = document.querySelector('.sidebar');
+            const content = document.querySelector('main');
+
+            if (width < 768) {
+                sidebar.classList.remove('d-md-block');
+                content.classList.remove('ms-sm-auto');
+                content.classList.remove('col-lg-10');
+                content.classList.add('col-12');
+            } else {
+                sidebar.classList.add('d-md-block');
+                content.classList.add('ms-sm-auto');
+                content.classList.add('col-lg-10');
+                content.classList.remove('col-12');
+            }
+        }
+
+        // Chamar a função de ajuste de layout no carregamento e redimensionamento da janela
+        window.addEventListener('load', adjustLayout);
+        window.addEventListener('resize', adjustLayout);
+    </script>
+</body>
+</html>
+

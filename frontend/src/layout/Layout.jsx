@@ -1,9 +1,20 @@
-import React from 'react'
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+import NavMenuComp from '../components/NavMenuComp';
+import SidebarComp from '../components/SidebarComp';
 
-function Layout() {
+function Layout({ children }) {
   return (
-    <div>Layout</div>
-  )
+    <Container fluid>
+      <NavMenuComp />
+      <Row>
+        <SidebarComp />
+        <Col md={9} lg={10} className="ms-sm-auto px-md-4">
+          {children}
+        </Col>
+      </Row>
+    </Container>
+  );
 }
 
-export default Layout
+export default Layout;

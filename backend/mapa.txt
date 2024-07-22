@@ -1,0 +1,54 @@
+src/
+├── main.ts
+├── app.module.ts
+├── auth/
+│   ├── auth.module.ts
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   └── jwt.strategy.ts
+    └── auth.routes.ts
+├── usuario/
+│   ├── users.module.ts
+│   ├── users.controller.ts
+│   ├── users.service.ts
+│   └── users.model.ts
+    └── users.routes.ts
+├── contas/
+│   ├── contas.module.ts
+│   ├── contas.controller.ts
+│   ├── contas.service.ts
+│   └── conta.model.ts
+    └── conta.routes.ts
+├── metas/
+│   ├── metas.module.ts
+│   ├── metas.controller.ts
+│   ├── metas.service.ts
+│   └── meta.model.ts
+    └── meta.routes.ts
+├── orcamentos/
+│   ├── orcamentos.module.ts
+│   ├── orcamentos.controller.ts
+│   ├── orcamentos.service.ts
+│   └── orcamento.model.ts
+    └── orcamento.routes.ts
+├── transacoes/
+│   ├── transacoes.module.ts
+│   ├── transacoes.controller.ts
+│   ├── transacoes.service.ts
+│   └── transacoes.model.ts
+    └── transacoes.routes.ts
+├── relatorios/
+│   ├── relatorios.module.ts
+│   ├── relatorios.controller.ts
+│   └── relatorios.service.ts
+    └── relatorios.routes.ts
+├── common/
+│   ├── guards/
+│   │   └── jwt-auth.guard.ts
+│   ├── interceptors/
+│   │   └── transform.interceptor.ts
+│   └── decorators/
+│       └── roles.decorator.ts
+└── config/
+    ├── database.config.ts
+    └── jwt.config.ts

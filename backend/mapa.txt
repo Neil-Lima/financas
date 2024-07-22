@@ -52,3 +52,75 @@ src/
 └── config/
     ├── database.config.ts
     └── jwt.config.ts
+
+
+
+Usuários:
+
+id, nome, sobrenome, email, senha
+Contas:
+
+id, nome, banco, saldo, tipo (conta corrente, poupança, etc.)
+Metas:
+
+id, nome, valor_meta, valor_atual, data_limite, descrição
+Orçamentos:
+
+id, categoria, valor_planejado, valor_gasto
+Transações:
+
+id, data, descrição, categoria, conta_id, valor
+Relatórios:
+
+Endpoints para gerar relatórios baseados nas transações, orçamentos e metas
+Autenticação:
+
+Implementar JWT para autenticação e proteção de rotas
+Para cada uma dessas entidades, você deve criar:
+
+Módulos
+Controladores
+Serviços
+DTOs (Data Transfer Objects)
+Entidades (se estiver usando TypeORM ou outro ORM)
+
+
+
+
+Claro, vou detalhar os dados que precisamos implementar no backend e como cada um deles vai funcionar ou se comunicar:
+
+Usuários:
+
+Dados: id, nome, sobrenome, email, senha
+Funcionamento: Autenticação, registro, perfil do usuário
+Comunicação: LoginPage.jsx, HomePage.jsx
+
+Contas:
+Dados: id, nome, banco, saldo, tipo
+Funcionamento: CRUD de contas, cálculo de saldo total
+Comunicação: ContasPage.jsx, HomePage.jsx
+
+Metas:
+Dados: id, nome, valor_meta, valor_atual, data_limite, descrição
+Funcionamento: CRUD de metas, cálculo de progresso
+Comunicação: MetasPage.jsx, HomePage.jsx
+
+Orçamentos:
+Dados: id, categoria, valor_planejado, valor_gasto
+Funcionamento: CRUD de orçamentos, cálculo de progresso
+Comunicação: OrcamentosPage.jsx, HomePage.jsx
+Transações:
+
+Dados: id, data, descrição, categoria, conta_id, valor
+Funcionamento: CRUD de transações, filtros, paginação
+Comunicação: TransacoesPage.jsx, HomePage.jsx, RelatoriosPage.jsx
+Relatórios:
+
+Dados: Agregações de transações, orçamentos e metas
+Funcionamento: Geração de relatórios e gráficos
+Comunicação: RelatoriosPage.jsx, HomePage.jsx
+Autenticação:
+
+Dados: Token JWT, refresh token
+Funcionamento: Login, logout, renovação de token
+Comunicação: Todos os componentes para requisições autenticadas

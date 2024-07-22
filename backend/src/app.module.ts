@@ -8,6 +8,8 @@ import { MetasModule } from './metas/metas.module';
 import { OrcamentosModule } from './orcamentos/orcamentos.module';
 import { TransacoesModule } from './transacoes/transacoes.module';
 import { RelatoriosModule } from './relatorios/relatorios.module';
+import { OrcamentosModule } from './orcamentos/orcamentos.module';
+import { OrcamentoModule } from './orcamento/orcamento.module';
 
 @Module({
   imports: [
@@ -28,6 +30,7 @@ import { RelatoriosModule } from './relatorios/relatorios.module';
     OrcamentosModule,
     TransacoesModule,
     RelatoriosModule,
+    OrcamentoModule,
   ],
 })
 export class AppModule {}

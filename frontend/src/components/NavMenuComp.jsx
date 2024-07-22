@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navbar, Nav, Form } from 'react-bootstrap';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import styled from 'styled-components';
 import { useTheme } from '../context/contextTheme';
+import { useNavigate } from 'react-router-dom';
 
 const ThemeIcon = styled.span`
   cursor: pointer;
@@ -13,6 +14,21 @@ const ThemeIcon = styled.span`
 
 function NavMenuComp() {
   const { theme, toggleTheme } = useTheme();
+  const [userName, setUserName] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUserName = localStorage.getItem('userName');
+    if (storedUserName) {
+      setUserName(storedUserName);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    navigate('/');
+  };
 
   return (
     <Navbar bg={theme} variant={theme} expand="md" className="sticky-top shadow-sm">
@@ -26,7 +42,10 @@ function NavMenuComp() {
           </ThemeIcon>
         </Nav.Item>
         <Nav.Item>
-          <Nav.Link href="#" className="px-3">Sair</Nav.Link>
+          <Nav.Link className="px-3">Olá, {userName}</Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link onClick={handleLogout} className="px-3">Sair</Nav.Link>
         </Nav.Item>
       </Nav>
     </Navbar>

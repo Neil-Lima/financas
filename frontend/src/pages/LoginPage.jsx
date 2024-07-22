@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Button, Card, Modal, Container } from 'react-bootstrap';
+import { Form, Button, Card, Modal, Container, Alert } from 'react-bootstrap';
 import { FaSignInAlt, FaUserPlus, FaSun, FaMoon } from 'react-icons/fa';
 import styled from 'styled-components';
 import { useTheme } from '../context/contextTheme';
@@ -28,25 +28,31 @@ function LoginPage() {
   const [nome, setNome] = useState('');
   const [sobrenome, setSobrenome] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showErrorMessage, setShowErrorMessage] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3001/auth/login', { username: email, password: senha });
+      const response = await axios.post('http://localhost:3001/usuarios/login', { email, senha });
       localStorage.setItem('token', response.data.access_token);
+      localStorage.setItem('userName', response.data.nome);
       navigate('/home');
     } catch (error) {
       console.error('Erro no login', error);
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 3000);
     }
   };
 
   const handleRegistro = async () => {
     try {
-      await axios.post('http://localhost:3001/auth/register', { username: email, password: senha, nome, sobrenome });
+      await axios.post('http://localhost:3001/usuarios', { nome, sobrenome, email, senha });
       setShowModal(false);
-      // Opcional: fazer login automaticamente após o registro
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
       console.error('Erro no registro', error);
     }
@@ -59,6 +65,16 @@ function LoginPage() {
       </ThemeToggle>
       <StyledCard className="p-4" style={{width: '400px'}}>
         <Card.Title className="text-center mb-4">Login</Card.Title>
+        {showSuccessMessage && (
+          <Alert variant="success" onClose={() => setShowSuccessMessage(false)} dismissible>
+            Usuário cadastrado com sucesso!
+          </Alert>
+        )}
+        {showErrorMessage && (
+          <Alert variant="danger" onClose={() => setShowErrorMessage(false)} dismissible>
+            Usuário não cadastrado ou senha incorreta.
+          </Alert>
+        )}
         <Form onSubmit={handleSubmit}>
           <Form.Group className="mb-3">
             <Form.Label>Email</Form.Label>

@@ -1,36 +1,31 @@
 /* eslint-disable prettier/prettier */
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { ContasModule } from './contas/contas.module';
-import { MetasModule } from './metas/metas.module';
-import { OrcamentosModule } from './orcamentos/orcamentos.module';
-import { TransacoesModule } from './transacoes/transacoes.module';
-import { RelatoriosModule } from './relatorios/relatorios.module';
-import { OrcamentosModule } from './orcamentos/orcamentos.module';
-import { OrcamentoModule } from './orcamento/orcamento.module';
+import { ConfigModule } from '@nestjs/config';
+import { UsuariosModule } from './usuarios/usuarios.module';
+import { Usuario } from './usuarios/entities/usuarios.entity';
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      password: '',
-      database: 'financas_db',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT, 10) || 3306,
+      username: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      entities: [Usuario],
       synchronize: true,
     }),
-    AuthModule,
-    UsersModule,
-    ContasModule,
-    MetasModule,
-    OrcamentosModule,
-    TransacoesModule,
-    RelatoriosModule,
-    OrcamentoModule,
+    UsuariosModule,
   ],
+  controllers: [],
+  providers: [],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  async onModuleInit() {
+    console.log('Database connection successful');
+    console.log(`Connected to database: ${process.env.DB_NAME}`);
+  }
+}

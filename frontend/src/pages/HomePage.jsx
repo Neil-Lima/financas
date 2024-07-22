@@ -6,6 +6,7 @@ import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -22,21 +23,26 @@ const StyledTable = styled(Table)`
 `;
 
 function HomePage() {
-  const [user, setUser] = useState(null);
+  const [userName, setUserName] = useState('');
   const [contas, setContas] = useState([]);
   const [metas, setMetas] = useState([]);
   const [orcamentos, setOrcamentos] = useState([]);
   const [transacoes, setTransacoes] = useState([]);
   const [relatorios, setRelatorios] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
         const headers = { Authorization: `Bearer ${token}` };
 
         const [userResponse, contasResponse, metasResponse, orcamentosResponse, transacoesResponse, relatoriosResponse] = await Promise.all([
-          axios.get('http://localhost:3001/users/me', { headers }),
+          axios.get('http://localhost:3001/usuarios', { headers }),
           axios.get('http://localhost:3001/contas', { headers }),
           axios.get('http://localhost:3001/metas', { headers }),
           axios.get('http://localhost:3001/orcamentos', { headers }),
@@ -44,7 +50,7 @@ function HomePage() {
           axios.get('http://localhost:3001/relatorios/resumo-financeiro', { headers })
         ]);
 
-        setUser(userResponse.data);
+        setUserName(userResponse.data.nome);
         setContas(contasResponse.data);
         setMetas(metasResponse.data);
         setOrcamentos(orcamentosResponse.data);
@@ -52,16 +58,19 @@ function HomePage() {
         setRelatorios(relatoriosResponse.data);
       } catch (error) {
         console.error('Erro ao buscar dados', error);
+        if (error.response && error.response.status === 401) {
+          navigate('/login');
+        }
       }
     };
 
     fetchData();
-  }, []);
+  }, [navigate]);
 
   const chartData = {
-    labels: orcamentos.map(o => o.categoria),
+    labels: orcamentos.map(orcamento => orcamento.categoria),
     datasets: [{
-      data: orcamentos.map(o => o.planejado),
+      data: orcamentos.map(orcamento => orcamento.planejado),
       backgroundColor: [
         'rgba(255, 99, 132, 0.8)',
         'rgba(54, 162, 235, 0.8)',
@@ -76,7 +85,7 @@ function HomePage() {
     <Layout>
       <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
         <h1 className="h2">Dashboard</h1>
-        {user && <h2>Bem-vindo, {user.nome}!</h2>}
+        <h2>Bem-vindo, {userName}!</h2>
         <div className="btn-toolbar mb-2 mb-md-0">
           <Button variant="outline-secondary" size="sm" className="me-2">Compartilhar</Button>
           <Button variant="outline-secondary" size="sm" className="me-2">Exportar</Button>

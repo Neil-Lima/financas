@@ -13,7 +13,7 @@ function Rotas() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/homepage" element={<HomePage />} />
+        <Route path="/home" element={<HomePage />} />
         <Route path="/metas" element={<MetasPage />} />
         <Route path="/orcamentos" element={<OrcamentosPage />} />
         <Route path="/relatorios" element={<RelatoriosPage />} />

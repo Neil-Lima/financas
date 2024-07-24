@@ -1,12 +1,12 @@
-import React from 'react';
-import { Row, Col, Button, Card, ListGroup } from 'react-bootstrap';
-import { FaCalendar } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { Row, Col, Button, Card, Form, Table } from 'react-bootstrap';
+import { FaFileExport } from 'react-icons/fa';
 import styled from 'styled-components';
-import { Bar, Pie, Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, LineElement, Title, Tooltip, Legend, PointElement } from 'chart.js';
 import Layout from '../layout/Layout';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, Title, Tooltip, Legend, PointElement);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const StyledCard = styled(Card)`
   border: none;
@@ -14,145 +14,144 @@ const StyledCard = styled(Card)`
   box-shadow: 0 0 15px rgba(0,0,0,.05);
 `;
 
+const StyledTable = styled(Table)`
+  box-shadow: 0 0 15px rgba(0,0,0,.05);
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
 function RelatoriosPage() {
-  const incomeExpenseData = {
-    labels: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho'],
+  const [dataInicial, setDataInicial] = useState('');
+  const [dataFinal, setDataFinal] = useState('');
+  const [relatorios, setRelatorios] = useState(null);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    // Aqui você pode adicionar a lógica de geração de relatórios local, sem comunicação com o backend
+  };
+
+  const chartData = {
+    labels: relatorios?.transacoes.map(transacao => new Date(transacao.data).toLocaleDateString()),
     datasets: [
       {
         label: 'Receitas',
-        data: [4500, 5000, 4800, 5200, 5000, 5500],
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-        borderColor: 'rgba(75, 192, 192, 1)',
-        borderWidth: 1
+        data: relatorios?.transacoes.filter(transacao => transacao.valor > 0).map(transacao => transacao.valor),
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.5)',
       },
       {
         label: 'Despesas',
-        data: [3500, 3800, 3600, 3900, 3700, 4000],
-        backgroundColor: 'rgba(255, 99, 132, 0.6)',
-        borderColor: 'rgba(255, 99, 132, 1)',
-        borderWidth: 1
-      }
-    ]
+        data: relatorios?.transacoes.filter(transacao => transacao.valor < 0).map(transacao => Math.abs(transacao.valor)),
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+      },
+    ],
   };
 
-  const expenseDistributionData = {
-    labels: ['Aluguel', 'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Outros'],
-    datasets: [{
-      data: [1200, 800, 500, 400, 300, 300],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.6)',
-        'rgba(54, 162, 235, 0.6)',
-        'rgba(255, 206, 86, 0.6)',
-        'rgba(75, 192, 192, 0.6)',
-        'rgba(153, 102, 255, 0.6)',
-        'rgba(255, 159, 64, 0.6)'
-      ],
-      borderColor: [
-        'rgba(255, 99, 132, 1)',
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 206, 86, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(153, 102, 255, 1)',
-        'rgba(255, 159, 64, 1)'
-      ],
-      borderWidth: 1
-    }]
-  };
-
-  const balanceEvolutionData = {
-    labels: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho'],
-    datasets: [{
-      label: 'Saldo',
-      data: [1000, 1200, 1400, 1700, 2000, 2500],
-      backgroundColor: 'rgba(75, 192, 192, 0.2)',
-      borderColor: 'rgba(75, 192, 192, 1)',
-      borderWidth: 2,
-      fill: true
-    }]
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      title: {
+        display: true,
+        text: 'Relatório de Transações',
+      },
+    },
   };
 
   return (
-    <Layout>    
+    <Layout>
       <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
         <h1 className="h2">Relatórios</h1>
         <div className="btn-toolbar mb-2 mb-md-0">
-          <Button variant="outline-secondary" size="sm" className="me-2">Compartilhar</Button>
-          <Button variant="outline-secondary" size="sm" className="me-2">Exportar</Button>
-          <Button variant="outline-secondary" size="sm">
-            <FaCalendar className="me-1" />
-            Este mês
+          <Button variant="outline-secondary" size="sm" className="me-2">
+            <FaFileExport className="me-1" />
+            Exportar
           </Button>
         </div>
       </div>
 
-      <Row>
-        <Col md={6} className="mb-4">
-          <StyledCard>
-            <Card.Body>
-              <Card.Title>Receitas vs Despesas</Card.Title>
-              <Bar data={incomeExpenseData} options={{ responsive: true }} />
-            </Card.Body>
-          </StyledCard>
-        </Col>
-        <Col md={6} className="mb-4">
-          <StyledCard>
-            <Card.Body>
-              <Card.Title>Distribuição de Despesas</Card.Title>
-              <Pie data={expenseDistributionData} options={{ responsive: true }} />
-            </Card.Body>
-          </StyledCard>
-        </Col>
-      </Row>
+      <Form onSubmit={handleSubmit}>
+        <Row className="mb-3">
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>Data Inicial</Form.Label>
+              <Form.Control type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} required />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>Data Final</Form.Label>
+              <Form.Control type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} required />
+            </Form.Group>
+          </Col>
+        </Row>
+        <Button variant="primary" type="submit">Gerar Relatório</Button>
+      </Form>
 
-      <Row>
-        <Col md={12} className="mb-4">
-          <StyledCard>
-            <Card.Body>
-              <Card.Title>Evolução do Saldo</Card.Title>
-              <Line data={balanceEvolutionData} options={{ responsive: true }} />
-            </Card.Body>
-          </StyledCard>
-        </Col>
-      </Row>
+      {relatorios && (
+        <>
+          <Row className="mt-4">
+            <Col md={4}>
+              <StyledCard>
+                <Card.Body>
+                  <Card.Title>Saldo Total</Card.Title>
+                  <Card.Text as="h2" className="text-primary">
+                    R$ {relatorios.saldo.toFixed(2)}
+                  </Card.Text>
+                </Card.Body>
+              </StyledCard>
+            </Col>
+            <Col md={4}>
+              <StyledCard>
+                <Card.Body>
+                  <Card.Title>Receitas</Card.Title>
+                  <Card.Text as="h2" className="text-success">
+                    R$ {relatorios.totalReceitas.toFixed(2)}
+                  </Card.Text>
+                </Card.Body>
+              </StyledCard>
+            </Col>
+            <Col md={4}>
+              <StyledCard>
+                <Card.Body>
+                  <Card.Title>Despesas</Card.Title>
+                  <Card.Text as="h2" className="text-danger">
+                    R$ {relatorios.totalDespesas.toFixed(2)}
+                  </Card.Text>
+                </Card.Body>
+              </StyledCard>
+            </Col>
+          </Row>
 
-      <Row>
-        <Col md={6} className="mb-4">
-          <StyledCard>
-            <Card.Body>
-              <Card.Title>Resumo Financeiro</Card.Title>
-              <ListGroup variant="flush">
-                <ListGroup.Item className="d-flex justify-content-between align-items-center">
-                  Total de Receitas
-                  <span className="badge bg-primary rounded-pill">R$ 5.000,00</span>
-                </ListGroup.Item>
-                <ListGroup.Item className="d-flex justify-content-between align-items-center">
-                  Total de Despesas
-                  <span className="badge bg-danger rounded-pill">R$ 3.500,00</span>
-                </ListGroup.Item>
-                <ListGroup.Item className="d-flex justify-content-between align-items-center">
-                  Saldo
-                  <span className="badge bg-success rounded-pill">R$ 1.500,00</span>
-                </ListGroup.Item>
-              </ListGroup>
-            </Card.Body>
-          </StyledCard>
-        </Col>
-        <Col md={6} className="mb-4">
-          <StyledCard>
-            <Card.Body>
-              <Card.Title>Top 5 Despesas</Card.Title>
-              <ListGroup variant="flush">
-                {['Aluguel', 'Alimentação', 'Transporte', 'Lazer', 'Saúde'].map((item, index) => (
-                  <ListGroup.Item key={index} className="d-flex justify-content-between align-items-center">
-                    {item}
-                    <span className="badge bg-primary rounded-pill">R$ {1200 - index * 200},00</span>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            </Card.Body>
-          </StyledCard>
-        </Col>
-      </Row>
+          <div style={{ height: '40vh', width: '100%' }}>
+            <Line data={chartData} options={chartOptions} />
+          </div>
+
+          <h2 className="mt-5">Transações</h2>
+          <StyledTable striped bordered hover size="sm">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {relatorios.transacoes.map((transacao, index) => (
+                <tr key={index}>
+                  <td>{new Date(transacao.data).toLocaleDateString()}</td>
+                  <td>{transacao.descricao}</td>
+                  <td>{transacao.categoria}</td>
+                  <td className={transacao.valor > 0 ? "text-success" : "text-danger"}>
+                    R$ {Math.abs(transacao.valor).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </StyledTable>
+        </>
+      )}
     </Layout>
   );
 }

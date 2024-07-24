@@ -48,7 +48,7 @@ function SidebarComp() {
     <StyledSidebar as={Col} md={3} lg={2} className={`d-md-block bg-${theme} sidebar collapse`}>
       <div className="position-sticky pt-3">
         <Nav className="flex-column">
-          <StyledNavLink to="/" className={location.pathname === '/' ? 'active' : ''}>
+          <StyledNavLink to="/home" className={location.pathname === '/' ? 'active' : ''}>
             <FaHome /> Dashboard
           </StyledNavLink>
           <StyledNavLink to="/transacoes" className={location.pathname === '/transacoes' ? 'active' : ''}>

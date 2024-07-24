@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
-import { Row, Col, Button, Card, Table, Pagination, Modal, Form } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Button, Card, ListGroup } from 'react-bootstrap';
+import { FaCalendar } from 'react-icons/fa';
 import styled from 'styled-components';
+import { Bar, Pie, Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, LineElement, Title, Tooltip, Legend, PointElement } from 'chart.js';
 import Layout from '../layout/Layout';
+import axios from 'axios';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, Title, Tooltip, Legend, PointElement);
 
 const StyledCard = styled(Card)`
   border: none;
@@ -10,154 +15,175 @@ const StyledCard = styled(Card)`
   box-shadow: 0 0 15px rgba(0,0,0,.05);
 `;
 
-function TransacoesPage() {
-  const [showModal, setShowModal] = useState(false);
+function RelatoriosPage() {
+  const [relatorioData, setRelatorioData] = useState(null);
 
-  const handleCloseModal = () => setShowModal(false);
-  const handleShowModal = () => setShowModal(true);
+  useEffect(() => {
+    const fetchRelatorioData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:3001/relatorios/resumo-financeiro', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setRelatorioData(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar dados do relatório', error);
+      }
+    };
+
+    fetchRelatorioData();
+  }, []);
+
+  const incomeExpenseData = {
+    labels: relatorioData ? Object.keys(relatorioData.saldoPorMes) : [],
+    datasets: [
+      {
+        label: 'Receitas',
+        data: relatorioData ? Object.values(relatorioData.receitasPorCategoria) : [],
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1
+      },
+      {
+        label: 'Despesas',
+        data: relatorioData ? Object.values(relatorioData.gastosPorCategoria) : [],
+        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 1
+      }
+    ]
+  };
+
+  const expenseDistributionData = {
+    labels: relatorioData ? Object.keys(relatorioData.gastosPorCategoria) : [],
+    datasets: [{
+      data: relatorioData ? Object.values(relatorioData.gastosPorCategoria) : [],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.6)',
+        'rgba(54, 162, 235, 0.6)',
+        'rgba(255, 206, 86, 0.6)',
+        'rgba(75, 192, 192, 0.6)',
+        'rgba(153, 102, 255, 0.6)',
+        'rgba(255, 159, 64, 0.6)'
+      ],
+      borderColor: [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 206, 86, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)',
+        'rgba(255, 159, 64, 1)'
+      ],
+      borderWidth: 1
+    }]
+  };
+
+  const balanceEvolutionData = {
+    labels: relatorioData ? Object.keys(relatorioData.saldoPorMes) : [],
+    datasets: [{
+      label: 'Saldo',
+      data: relatorioData ? Object.values(relatorioData.saldoPorMes) : [],
+      backgroundColor: 'rgba(75, 192, 192, 0.2)',
+      borderColor: 'rgba(75, 192, 192, 1)',
+      borderWidth: 2,
+      fill: true
+    }]
+  };
 
   return (
-    <Layout>  
+    <Layout>    
       <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-        <h1 className="h2">Transações</h1>
+        <h1 className="h2">Relatórios</h1>
         <div className="btn-toolbar mb-2 mb-md-0">
-          <Button variant="primary" size="sm" onClick={handleShowModal}>
-            <FaPlus /> Nova Transação
+          <Button variant="outline-secondary" size="sm" className="me-2">Compartilhar</Button>
+          <Button variant="outline-secondary" size="sm" className="me-2">Exportar</Button>
+          <Button variant="outline-secondary" size="sm">
+            <FaCalendar className="me-1" />
+            Este mês
           </Button>
         </div>
       </div>
 
-      <StyledCard className="mb-4">
-        <Card.Body>
-          <Card.Title>Filtros</Card.Title>
-          <Form className="row g-3">
-            <Form.Group as={Col} md={4}>
-              <Form.Label>Data Início</Form.Label>
-              <Form.Control type="date" />
-            </Form.Group>
-            <Form.Group as={Col} md={4}>
-              <Form.Label>Data Fim</Form.Label>
-              <Form.Control type="date" />
-            </Form.Group>
-            <Form.Group as={Col} md={4}>
-              <Form.Label>Categoria</Form.Label>
-              <Form.Select>
-                <option>Todas</option>
-                <option>Alimentação</option>
-                <option>Moradia</option>
-                <option>Transporte</option>
-                <option>Lazer</option>
-              </Form.Select>
-            </Form.Group>
-            <Col xs={12}>
-              <Button variant="primary" type="submit">Aplicar Filtros</Button>
-            </Col>
-          </Form>
-        </Card.Body>
-      </StyledCard>
+      <Row>
+        <Col md={6} className="mb-4">
+          <StyledCard>
+            <Card.Body>
+              <Card.Title>Receitas vs Despesas</Card.Title>
+              <Bar data={incomeExpenseData} options={{ responsive: true }} />
+            </Card.Body>
+          </StyledCard>
+        </Col>
+        <Col md={6} className="mb-4">
+          <StyledCard>
+            <Card.Body>
+              <Card.Title>Distribuição de Despesas</Card.Title>
+              <Pie data={expenseDistributionData} options={{ responsive: true }} />
+            </Card.Body>
+          </StyledCard>
+        </Col>
+      </Row>
 
-      <Table responsive striped hover>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Descrição</th>
-            <th>Categoria</th>
-            <th>Conta</th>
-            <th>Valor</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>01/05/2023</td>
-            <td>Supermercado</td>
-            <td>Alimentação</td>
-            <td>Conta Corrente</td>
-            <td className="text-danger">-R$ 250,00</td>
-            <td>
-              <Button variant="outline-primary" size="sm" className="me-2"><FaEdit /></Button>
-              <Button variant="outline-danger" size="sm"><FaTrash /></Button>
-            </td>
-          </tr>
-          <tr>
-            <td>03/05/2023</td>
-            <td>Salário</td>
-            <td>Renda</td>
-            <td>Conta Corrente</td>
-            <td className="text-success">R$ 3.500,00</td>
-            <td>
-              <Button variant="outline-primary" size="sm" className="me-2"><FaEdit /></Button>
-              <Button variant="outline-danger" size="sm"><FaTrash /></Button>
-            </td>
-          </tr>
-          <tr>
-            <td>05/05/2023</td>
-            <td>Conta de Luz</td>
-            <td>Moradia</td>
-            <td>Conta Corrente</td>
-            <td className="text-danger">-R$ 120,00</td>
-            <td>
-              <Button variant="outline-primary" size="sm" className="me-2"><FaEdit /></Button>
-              <Button variant="outline-danger" size="sm"><FaTrash /></Button>
-            </td>
-          </tr>
-        </tbody>
-      </Table>
+      <Row>
+        <Col md={12} className="mb-4">
+          <StyledCard>
+            <Card.Body>
+              <Card.Title>Evolução do Saldo</Card.Title>
+              <Line data={balanceEvolutionData} options={{ responsive: true }} />
+            </Card.Body>
+          </StyledCard>
+        </Col>
+      </Row>
 
-      <Pagination className="justify-content-center">
-        <Pagination.Prev disabled />
-        <Pagination.Item active>{1}</Pagination.Item>
-        <Pagination.Item>{2}</Pagination.Item>
-        <Pagination.Item>{3}</Pagination.Item>
-        <Pagination.Next />
-      </Pagination>
-
-      <Modal show={showModal} onHide={handleCloseModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Nova Transação</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>Descrição</Form.Label>
-              <Form.Control type="text" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Valor</Form.Label>
-              <Form.Control type="number" step="0.01" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Data</Form.Label>
-              <Form.Control type="date" required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Categoria</Form.Label>
-              <Form.Select required>
-                <option value="">Selecione uma categoria</option>
-                <option>Alimentação</option>
-                <option>Moradia</option>
-                <option>Transporte</option>
-                <option>Lazer</option>
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Conta</Form.Label>
-              <Form.Select required>
-                <option value="">Selecione uma conta</option>
-                <option>Conta Corrente</option>
-                <option>Poupança</option>
-                <option>Cartão de Crédito</option>
-              </Form.Select>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
-          <Button variant="primary" onClick={handleCloseModal}>Salvar</Button>
-        </Modal.Footer>
-      </Modal>
+      <Row>
+        <Col md={6} className="mb-4">
+          <StyledCard>
+            <Card.Body>
+              <Card.Title>Resumo Financeiro</Card.Title>
+              <ListGroup variant="flush">
+                <ListGroup.Item className="d-flex justify-content-between align-items-center">
+                  Total de Receitas
+                  <span className="badge bg-primary rounded-pill">
+                    R$ {relatorioData ? relatorioData.totalReceitas.toFixed(2) : '0.00'}
+                  </span>
+                </ListGroup.Item>
+                <ListGroup.Item className="d-flex justify-content-between align-items-center">
+                  Total de Despesas
+                  <span className="badge bg-danger rounded-pill">
+                    R$ {relatorioData ? relatorioData.totalDespesas.toFixed(2) : '0.00'}
+                  </span>
+                </ListGroup.Item>
+                <ListGroup.Item className="d-flex justify-content-between align-items-center">
+                  Saldo
+                  <span className="badge bg-success rounded-pill">
+                    R$ {relatorioData ? relatorioData.saldo.toFixed(2) : '0.00'}
+                  </span>
+                </ListGroup.Item>
+              </ListGroup>
+            </Card.Body>
+          </StyledCard>
+        </Col>
+        <Col md={6} className="mb-4">
+          <StyledCard>
+            <Card.Body>
+              <Card.Title>Top 5 Despesas</Card.Title>
+              <ListGroup variant="flush">
+                {relatorioData && Object.entries(relatorioData.gastosPorCategoria)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 5)
+                  .map(([categoria, valor], index) => (
+                    <ListGroup.Item key={index} className="d-flex justify-content-between align-items-center">
+                      {categoria}
+                      <span className="badge bg-primary rounded-pill">R$ {valor.toFixed(2)}</span>
+                    </ListGroup.Item>
+                  ))}
+              </ListGroup>
+            </Card.Body>
+          </StyledCard>
+        </Col>
+      </Row>
     </Layout>
   );
 }
 
-export default TransacoesPage;
+export default RelatoriosPage;
+

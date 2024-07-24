@@ -24,21 +24,20 @@ const ThemeToggle = styled.button`
 
 function LoginPage() {
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [nome, setNome] = useState('');
-  const [sobrenome, setSobrenome] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
+  const handleSubmit = async (event) => {
+    if (event) event.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3001/usuarios/login', { email, senha });
+      const response = await axios.post('http://localhost:3001/auth/login', { email, password });
       localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('userName', response.data.nome);
+      localStorage.setItem('userName', response.data.username);
       navigate('/home');
     } catch (error) {
       console.error('Erro no login', error);
@@ -49,7 +48,7 @@ function LoginPage() {
 
   const handleRegistro = async () => {
     try {
-      await axios.post('http://localhost:3001/usuarios', { nome, sobrenome, email, senha });
+      await axios.post('http://localhost:3001/auth/register', { username, email, password });
       setShowModal(false);
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
@@ -81,7 +80,7 @@ function LoginPage() {
             <Form.Control
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
               required
             />
           </Form.Group>
@@ -89,8 +88,8 @@ function LoginPage() {
             <Form.Label>Senha</Form.Label>
             <Form.Control
               type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               required
             />
           </Form.Group>
@@ -110,20 +109,16 @@ function LoginPage() {
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>Nome</Form.Label>
-              <Form.Control type="text" value={nome} onChange={(e) => setNome(e.target.value)} required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Sobrenome</Form.Label>
-              <Form.Control type="text" value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} required />
+              <Form.Label>Nome de Usuário</Form.Label>
+              <Form.Control type="text" value={username} onChange={(event) => setUsername(event.target.value)} required />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Email</Form.Label>
-              <Form.Control type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Form.Control type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Senha</Form.Label>
-              <Form.Control type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+              <Form.Control type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
             </Form.Group>
           </Form>
         </Modal.Body>

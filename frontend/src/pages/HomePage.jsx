@@ -5,8 +5,6 @@ import styled from 'styled-components';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -29,48 +27,11 @@ function HomePage() {
   const [orcamentos, setOrcamentos] = useState([]);
   const [transacoes, setTransacoes] = useState([]);
   const [relatorios, setRelatorios] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        const headers = { Authorization: `Bearer ${token}` };
-
-        const [userResponse, contasResponse, metasResponse, orcamentosResponse, transacoesResponse, relatoriosResponse] = await Promise.all([
-          axios.get('http://localhost:3001/usuarios', { headers }),
-          axios.get('http://localhost:3001/contas', { headers }),
-          axios.get('http://localhost:3001/metas', { headers }),
-          axios.get('http://localhost:3001/orcamentos', { headers }),
-          axios.get('http://localhost:3001/transacoes', { headers }),
-          axios.get('http://localhost:3001/relatorios/resumo-financeiro', { headers })
-        ]);
-
-        setUserName(userResponse.data.nome);
-        setContas(contasResponse.data);
-        setMetas(metasResponse.data);
-        setOrcamentos(orcamentosResponse.data);
-        setTransacoes(transacoesResponse.data);
-        setRelatorios(relatoriosResponse.data);
-      } catch (error) {
-        console.error('Erro ao buscar dados', error);
-        if (error.response && error.response.status === 401) {
-          navigate('/login');
-        }
-      }
-    };
-
-    fetchData();
-  }, [navigate]);
 
   const chartData = {
-    labels: orcamentos.map(orcamento => orcamento.categoria),
+    labels: Array.isArray(orcamentos) ? orcamentos.map(orcamento => orcamento.categoria) : [],
     datasets: [{
-      data: orcamentos.map(orcamento => orcamento.planejado),
+      data: Array.isArray(orcamentos) ? orcamentos.map(orcamento => orcamento.planejado) : [],
       backgroundColor: [
         'rgba(255, 99, 132, 0.8)',
         'rgba(54, 162, 235, 0.8)',
@@ -145,7 +106,7 @@ function HomePage() {
           </tr>
         </thead>
         <tbody>
-          {transacoes.slice(0, 5).map((transacao, index) => (
+          {Array.isArray(transacoes) && transacoes.slice(0, 5).map((transacao, index) => (
             <tr key={index}>
               <td>{new Date(transacao.data).toLocaleDateString()}</td>
               <td>{transacao.descricao}</td>

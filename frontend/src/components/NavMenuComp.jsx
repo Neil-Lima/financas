@@ -42,7 +42,7 @@ function NavMenuComp() {
           </ThemeIcon>
         </Nav.Item>
         <Nav.Item>
-          <Nav.Link className="px-3">Olá, {userName}</Nav.Link>
+          <Nav.Link className="px-3">{userName}</Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link onClick={handleLogout} className="px-3">Sair</Nav.Link>

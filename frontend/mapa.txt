@@ -1,0 +1,52 @@
+Aqui está a análise das tabelas e estruturas de dados do backend que eles devem conter, juntamente com seus relacionamentos, em português:
+
+Tabela de Usuários:
+
+Usada por: LoginPage, PerfilPage, ConfiguracoesPage
+Campos: id, nome, email, senha, imagem_perfil, preferencias
+Tabela de Transações:
+
+Usada por: TransacoesPage, HomePage, HistoricoPage, RelatoriosPage
+Campos: id, id_usuario, data, descricao, valor, categoria, tipo (receita/despesa)
+Tabela de Contas:
+
+Usada por: ContasPage, HomePage
+Campos: id, id_usuario, nome, saldo, categoria
+Tabela de Orçamentos:
+
+Usada por: OrcamentosPage, RelatoriosPage
+Campos: id, id_usuario, categoria, valor_planejado, valor_gasto
+Tabela de Metas:
+
+Usada por: MetasPage, HomePage
+Campos: id, id_usuario, descricao, valor_alvo, valor_atual, prazo
+Tabela de Investimentos:
+
+Usada por: HomePage, RelatoriosPage
+Campos: id, id_usuario, tipo, valor, rendimento
+Tabela de Despesas:
+
+Usada por: DespesaPage, HomePage, RelatoriosPage
+Campos: id, id_usuario, descricao, valor, data, categoria
+Tabela de Financiamentos:
+
+Usada por: FinanciamentosPage
+Campos: id, id_usuario, descricao, valor_total, parcelas_restantes, valor_mensal, data_inicio
+Tabela de Parcelamentos:
+
+Usada por: ParcelamentosPage
+Campos: id, id_usuario, descricao, valor_total, parcelas_restantes, valor_mensal, data_inicio
+Tabela de Estoque:
+
+Usada por: EstoquePage
+Campos: id, id_usuario, nome_produto, quantidade, preco_unitario, categoria
+Relacionamentos:
+
+A tabela de Usuários é a tabela central, conectada a todas as outras tabelas via chave estrangeira id_usuario.
+A tabela de Transações está conectada à tabela de Contas (para atualização de saldos).
+A tabela de Orçamentos está conectada à tabela de Transações (para rastrear valores gastos).
+A tabela de Metas pode estar conectada à tabela de Transações (para atualizar o progresso).
+A tabela de Despesas é um subconjunto da tabela de Transações (pode ser combinada ou separada).
+A HomePage e a RelatoriosPage precisarão acessar múltiplas tabelas para coletar e exibir dados financeiros abrangentes.
+
+Esta estrutura permite um sistema abrangente de gerenciamento financeiro, cobrindo vários aspectos das finanças pessoais enquanto mantém relações entre diferentes pontos de dados.

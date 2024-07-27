@@ -1,20 +1,24 @@
 import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
-import NavMenuComp from '../components/NavMenuComp';
+import NavbarComp from '../components/NavbarComp';
 import SidebarComp from '../components/SidebarComp';
 
-function Layout({ children }) {
+const Layout = ({ children }) => {
   return (
-    <Container fluid>
-      <NavMenuComp />
-      <Row>
-        <SidebarComp />
-        <Col md={9} lg={10} className="ms-sm-auto px-md-4">
-          {children}
+    <Container fluid className="p-0">
+      <Row noGutters>
+        <Col md={2} className="d-none d-md-block">
+          <SidebarComp />
+        </Col>
+        <Col md={10}>
+          <NavbarComp />
+          <Container fluid>
+            {children}
+          </Container>
         </Col>
       </Row>
     </Container>
   );
-}
+};
 
 export default Layout;

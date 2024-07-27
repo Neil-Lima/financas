@@ -7,6 +7,14 @@ import RelatoriosPage from '../pages/RelatoriosPage'
 import TransacoesPage from '../pages/TransacoesPage'
 import ContasPage from '../pages/ContasPage'
 import LoginPage from '../pages/LoginPage'
+import DespesaPage from '../pages/DespesaPage'
+import ParcelamentosPage from '../pages/ParcelamentosPage'
+import FinanciamentosPage from '../pages/FinanciamentosPage'
+import ConfiguracoesPage from '../pages/ConfiguracoesPage'
+import HistoricoPage from '../pages/HistoricoPage'
+import PerfilPage from '../pages/PerfilPage'
+import EstoquePage from '../pages/EstoquePage'
+
 
 function Rotas() {
   return (
@@ -19,6 +27,13 @@ function Rotas() {
         <Route path="/relatorios" element={<RelatoriosPage />} />
         <Route path="/transacoes" element={<TransacoesPage />} />
         <Route path="/contas" element={<ContasPage />} />
+        <Route path="/despesa" element={<DespesaPage />} />
+        <Route path="/parcelamentos" element={<ParcelamentosPage/>} />
+        <Route path="/financiamentos" element={<FinanciamentosPage/>} />
+        <Route path="/configuracoes" element={<ConfiguracoesPage/>} />
+        <Route path="/historico" element={<HistoricoPage/>} />
+        <Route path="/perfil" element={<PerfilPage/>} />
+        <Route path="/estoque" element={<EstoquePage/>} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,99 +1,209 @@
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Card, Modal, Form } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { Container, Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faPlus,
+  faEdit,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
+import { Pie, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
+
+ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const StyledCard = styled(Card)`
   border: none;
   border-radius: 8px;
   box-shadow: 0 0 15px rgba(0,0,0,.05);
+  margin-bottom: 20px;
 `;
 
-function ContasPage() {
-  const [contas, setContas] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ nome: '', tipo: '', saldoInicial: 0, banco: '' });
+const ChartContainer = styled.div`
+  height: 300px;
+  width: 100%;
+`;
 
-  const handleClose = () => setShowModal(false);
-  const handleShow = () => setShowModal(true);
+const ContasPage = () => {
+  const [contas, setContas] = useState([
+    { id: 1, nome: 'Conta Corrente', saldo: 5000, categoria: 'Bancária' },
+    { id: 2, nome: 'Poupança', saldo: 10000, categoria: 'Investimento' },
+    { id: 3, nome: 'Carteira', saldo: 500, categoria: 'Dinheiro Físico' },
+    { id: 4, nome: 'Investimentos', saldo: 20000, categoria: 'Investimento' },
+  ]);
+  const [novaConta, setNovaConta] = useState({ nome: '', saldo: '', categoria: '' });
 
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
-    setFormData({ ...formData, [name]: value });
+  const handleNovaContaChange = (e) => {
+    setNovaConta({ ...novaConta, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    // Aqui você pode adicionar a lógica de criação de conta local, sem comunicação com o backend
+  const adicionarConta = (e) => {
+    e.preventDefault();
+    setContas([...contas, { ...novaConta, id: contas.length + 1, saldo: parseFloat(novaConta.saldo) }]);
+    setNovaConta({ nome: '', saldo: '', categoria: '' });
   };
 
-  const handleDelete = (id) => {
-    // Aqui você pode adicionar a lógica de exclusão de conta local, sem comunicação com o backend
+  const despesasPorCategoria = {
+    labels: ['Bancária', 'Investimento', 'Dinheiro Físico'],
+    datasets: [{
+      data: [5000, 30000, 500],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.6)',
+        'rgba(54, 162, 235, 0.6)',
+        'rgba(255, 206, 86, 0.6)',
+      ],
+    }]
+  };
+
+  const distribuicaoSaldos = {
+    labels: contas.map(conta => conta.nome),
+    datasets: [{
+      label: 'Saldo',
+      data: contas.map(conta => conta.saldo),
+      backgroundColor: 'rgba(75, 192, 192, 0.6)',
+    }]
   };
 
   return (
-    <Layout>   
-      <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-        <h1 className="h2">Contas</h1>
-        <div className="btn-toolbar mb-2 mb-md-0">
-          <Button variant="primary" size="sm" onClick={handleShow}>
-            <FaPlus /> Nova Conta
-          </Button>
-        </div>
-      </div>
-      <Row xs={1} md={3} className="g-4">
-        {contas.map((conta) => (
-          <Col key={conta.id}>
-            <StyledCard className="h-100">
+    <Layout>
+      <Container>
+        <Row className="mb-4">
+          <Col>
+            <h2>Contas</h2>
+          </Col>
+        </Row>
+
+        <Row className="mb-4">
+          <Col>
+            <StyledCard>
               <Card.Body>
-                <Card.Title>{conta.nome}</Card.Title>
-                <Card.Subtitle className="mb-2 text-muted">{conta.banco}</Card.Subtitle>
-                <Card.Text>
-                  Saldo: R$ {conta.saldo.toFixed(2)}
-                </Card.Text>
-                <Button variant="outline-primary" size="sm" className="me-2"><FaEdit /> Editar</Button>
-                <Button variant="outline-danger" size="sm" onClick={() => handleDelete(conta.id)}><FaTrash /> Excluir</Button>
+                <Card.Title>Nova Conta</Card.Title>
+                <Form onSubmit={adicionarConta}>
+                  <Row>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label>Nome da Conta</Form.Label>
+                        <Form.Control 
+                          type="text" 
+                          name="nome"
+                          value={novaConta.nome}
+                          onChange={handleNovaContaChange}
+                          placeholder="Ex: Conta Corrente" 
+                          required
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label>Saldo Inicial</Form.Label>
+                        <Form.Control 
+                          type="number" 
+                          name="saldo"
+                          value={novaConta.saldo}
+                          onChange={handleNovaContaChange}
+                          placeholder="0.00" 
+                          required
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label>Categoria</Form.Label>
+                        <Form.Control 
+                          as="select"
+                          name="categoria"
+                          value={novaConta.categoria}
+                          onChange={handleNovaContaChange}
+                          required
+                        >
+                          <option value="">Selecione uma categoria</option>
+                          <option value="Bancária">Bancária</option>
+                          <option value="Investimento">Investimento</option>
+                          <option value="Dinheiro Físico">Dinheiro Físico</option>
+                        </Form.Control>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  <Button variant="primary" type="submit" className="mt-3">
+                    <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                    Adicionar Conta
+                  </Button>
+                </Form>
               </Card.Body>
             </StyledCard>
           </Col>
-        ))}
-      </Row>
+        </Row>
 
-      <Modal show={showModal} onHide={handleClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>Nova Conta</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label>Nome da Conta</Form.Label>
-              <Form.Control type="text" name="nome" onChange={handleInputChange} required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Tipo de Conta</Form.Label>
-              <Form.Select name="tipo" onChange={handleInputChange} required>
-                <option value="">Selecione um tipo</option>
-                <option value="CONTA_CORRENTE">Conta Corrente</option>
-                <option value="POUPANCA">Poupança</option>
-                <option value="CARTAO_CREDITO">Cartão de Crédito</option>
-                <option value="INVESTIMENTO">Investimento</option>
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Saldo Inicial</Form.Label>
-              <Form.Control type="number" step="0.01" name="saldoInicial" onChange={handleInputChange} required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Banco</Form.Label>
-              <Form.Control type="text" name="banco" onChange={handleInputChange} required />
-            </Form.Group>
-            <Button variant="primary" type="submit">Salvar</Button>
-          </Form>
-        </Modal.Body>
-      </Modal>
+        <Row>
+          <Col md={6} className="mb-4">
+            <StyledCard>
+              <Card.Body>
+                <Card.Title>Distribuição de Saldos</Card.Title>
+                <ChartContainer>
+                  <Pie data={despesasPorCategoria} options={{ responsive: true, maintainAspectRatio: false }} />
+                </ChartContainer>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+          <Col md={6} className="mb-4">
+            <StyledCard>
+              <Card.Body>
+                <Card.Title>Saldo por Conta</Card.Title>
+                <ChartContainer>
+                  <Bar 
+                    data={distribuicaoSaldos} 
+                    options={{ 
+                      responsive: true, 
+                      maintainAspectRatio: false,
+                      scales: {
+                        y: {
+                          beginAtZero: true
+                        }
+                      }
+                    }} 
+                  />
+                </ChartContainer>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+        </Row>
+
+        <StyledCard>
+          <Card.Body>
+            <Card.Title>Lista de Contas</Card.Title>
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Saldo</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contas.map((conta) => (
+                  <tr key={conta.id}>
+                    <td>{conta.nome}</td>
+                    <td>{conta.categoria}</td>
+                    <td>R$ {conta.saldo.toFixed(2)}</td>
+                    <td>
+                      <Button variant="outline-primary" size="sm" className="mr-2">
+                        <FontAwesomeIcon icon={faEdit} />
+                      </Button>
+                      <Button variant="outline-danger" size="sm">
+                        <FontAwesomeIcon icon={faTrash} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </Card.Body>
+        </StyledCard>
+      </Container>
     </Layout>
   );
-}
+};
 
 export default ContasPage;

@@ -1,135 +1,123 @@
 import React, { useState } from 'react';
-import { Form, Button, Card, Modal, Container, Alert } from 'react-bootstrap';
-import { FaSignInAlt, FaUserPlus, FaSun, FaMoon } from 'react-icons/fa';
-import styled from 'styled-components';
-import { useTheme } from '../context/contextTheme';
+import { Container, Form, Button, Modal, Alert } from 'react-bootstrap';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-
-const StyledCard = styled(Card)`
-  border: none;
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0,0,0,.05);
-`;
-
-const ThemeToggle = styled.button`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-`;
 
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [showErrorMessage, setShowErrorMessage] = useState(false);
-  const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerName, setRegisterName] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleSubmit = async (event) => {
-    if (event) event.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3001/auth/login', { email, password });
+      const response = await axios.post('http://localhost:3000/auth/login', { email, password });
       localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('userName', response.data.username);
-      navigate('/home');
-    } catch (error) {
-      console.error('Erro no login', error);
-      setShowErrorMessage(true);
-      setTimeout(() => setShowErrorMessage(false), 3000);
+      setSuccess('Login successful!');
+      setError('');
+      // Redirect to dashboard or home page
+    } catch (err) {
+      setError('Invalid credentials');
+      setSuccess('');
     }
   };
 
-  const handleRegistro = async () => {
+  const handleRegister = async (e) => {
+    e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/auth/register', { username, email, password });
+      await axios.post('http://localhost:3001/auth/register', {
+        email: registerEmail,
+        password: registerPassword,
+        nome: registerName
+      });
       setShowModal(false);
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 3000);
-    } catch (error) {
-      console.error('Erro no registro', error);
+      setSuccess('Registration successful! Please login.');
+      setError('');
+    } catch (err) {
+      setError('Registration failed. Please try again.');
+      setSuccess('');
     }
   };
 
   return (
-    <Container fluid className="d-flex justify-content-center align-items-center" style={{height: '100vh'}}>
-      <ThemeToggle onClick={toggleTheme}>
-        {theme === 'dark' ? <FaSun /> : <FaMoon />}
-      </ThemeToggle>
-      <StyledCard className="p-4" style={{width: '400px'}}>
-        <Card.Title className="text-center mb-4">Login</Card.Title>
-        {showSuccessMessage && (
-          <Alert variant="success" onClose={() => setShowSuccessMessage(false)} dismissible>
-            Usuário cadastrado com sucesso!
-          </Alert>
-        )}
-        {showErrorMessage && (
-          <Alert variant="danger" onClose={() => setShowErrorMessage(false)} dismissible>
-            Usuário não cadastrado ou senha incorreta.
-          </Alert>
-        )}
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>Senha</Form.Label>
-            <Form.Control
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </Form.Group>
-          <Button variant="primary" type="submit" className="w-100 mb-3">
-            <FaSignInAlt className="me-2" /> Entrar
-          </Button>
-          <Button variant="secondary" onClick={() => setShowModal(true)} className="w-100">
-            <FaUserPlus className="me-2" /> Registrar
-          </Button>
-        </Form>
-      </StyledCard>
+    <Container className="mt-5">
+      <h2>Login</h2>
+      {error && <Alert variant="danger">{error}</Alert>}
+      {success && <Alert variant="success">{success}</Alert>}
+      <Form onSubmit={handleLogin}>
+        <Form.Group className="mb-3">
+          <Form.Label>Email address</Form.Label>
+          <Form.Control
+            type="email"
+            placeholder="Enter email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </Form.Group>
+        <Form.Group className="mb-3">
+          <Form.Label>Password</Form.Label>
+          <Form.Control
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </Form.Group>
+        <Button variant="primary" type="submit">
+          Login
+        </Button>
+      </Form>
+      <Button variant="link" onClick={() => setShowModal(true)}>
+        Don't have an account? Register here
+      </Button>
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Registro</Modal.Title>
+          <Modal.Title>Register</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
+          <Form onSubmit={handleRegister}>
             <Form.Group className="mb-3">
-              <Form.Label>Nome de Usuário</Form.Label>
-              <Form.Control type="text" value={username} onChange={(event) => setUsername(event.target.value)} required />
+              <Form.Label>Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter name"
+                value={registerName}
+                onChange={(e) => setRegisterName(e.target.value)}
+                required
+              />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Email</Form.Label>
-              <Form.Control type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+              <Form.Label>Email address</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="Enter email"
+                value={registerEmail}
+                onChange={(e) => setRegisterEmail(e.target.value)}
+                required
+              />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Senha</Form.Label>
-              <Form.Control type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Password"
+                value={registerPassword}
+                onChange={(e) => setRegisterPassword(e.target.value)}
+                required
+              />
             </Form.Group>
+            <Button variant="primary" type="submit">
+              Register
+            </Button>
           </Form>
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleRegistro}>
-            Registrar
-          </Button>
-        </Modal.Footer>
       </Modal>
     </Container>
   );

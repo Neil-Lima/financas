@@ -1,7 +1,6 @@
-/* eslint-disable prettier/prettier */
+// src/usuarios/entities/usuario.entity.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import * as bcrypt from 'bcrypt';
 
 @Schema()
 export class Usuario extends Document {
@@ -15,32 +14,10 @@ export class Usuario extends Document {
   senha: string;
 
   @Prop()
-  telefone: string;
+  imagem_perfil: string;
 
-  @Prop()
-  endereco: string;
-
-  @Prop()
-  dataNascimento: Date;
-
-  @Prop()
-  profissao: string;
-
-  @Prop({ default: Date.now })
-  dataCriacao: Date;
-
-  @Prop({ default: Date.now })
-  dataAtualizacao: Date;
-
-  async compararSenha(candidateSenha: string): Promise<boolean> {
-    return bcrypt.compare(candidateSenha, this.senha);
-  }
+  @Prop({ type: Object })
+  preferencias: Record<string, any>;
 }
 
 export const UsuarioSchema = SchemaFactory.createForClass(Usuario);
-
-UsuarioSchema.pre('save', async function(next) {
-  if (!this.isModified('senha')) return next();
-  this.senha = await bcrypt.hash(this.senha, 10);
-  next();
-});

@@ -1,23 +1,20 @@
-/* eslint-disable prettier/prettier */
-import { Module, OnModuleInit } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { UsuariosModule } from './usuarios/usuarios.module';
-import { AuthModule } from './auth/auth.module';
+import { ContasModule } from './contas/contas.module';
+import { DespesasModule } from './despesas/despesas.module';
+import { FinanciamentosModule } from './financiamentos/financiamentos.module';
+import { MetasModule } from './metas/metas.module';
+import { OrcamentosModule } from './orcamentos/orcamentos.module';
+import { TransacoesModule } from './transacoes/transacoes.module';
+import { InvestimentosModule } from './investimentos/investimentos.module';
+import { ParcelamentosModule } from './parcelamentos/parcelamentos.module';
+import { EstoqueModule } from './estoque/estoque.module';
 
 @Module({
-  imports: [
-    MongooseModule.forRoot('mongodb://localhost/financas_db'),
-    UsuariosModule,
-    AuthModule,
-  ],
+  imports: [UsuariosModule, ContasModule, DespesasModule, FinanciamentosModule, MetasModule, OrcamentosModule, TransacoesModule, InvestimentosModule, ParcelamentosModule, EstoqueModule],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule implements OnModuleInit {
-  constructor(@InjectConnection() private readonly connection: Connection) {}
-
-  onModuleInit() {
-    const dbName = this.connection.db.databaseName;
-    console.log(`Conectado com sucesso ao banco de dados: ${dbName}`);
-  }
-}
+export class AppModule {}

@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Button, Form, ProgressBar, Table } from 'react-bootstrap';
+import React from 'react';
+import { Container, Row, Col, Card, Button, Table, ProgressBar } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faPlus,
-  faEdit,
-  faTrash
+  faUser,
+  faSignOutAlt,
+  faCog,
 } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
-import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
+import { Line, Pie, Doughnut } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
 
 const StyledCard = styled(Card)`
@@ -27,14 +27,6 @@ const ChartContainer = styled.div`
 `;
 
 const HomePage = () => {
-  const [widgets, setWidgets] = useState([
-    { id: 'saldo', title: 'Saldo Atual', active: true },
-    { id: 'despesas', title: 'Despesas do Mês', active: true },
-    { id: 'receitas', title: 'Receitas do Mês', active: true },
-    { id: 'investimentos', title: 'Investimentos', active: true },
-    { id: 'metas', title: 'Metas Financeiras', active: true },
-    { id: 'transacoes', title: 'Últimas Transações', active: true },
-  ]);
 
   const financialData = {
     saldoAtual: 5000,
@@ -89,120 +81,101 @@ const HomePage = () => {
       <Container fluid>
         <Row className="mb-4">
           <Col>
-            <h2>Dashboard</h2>
+            <h2>Bem-vindo, João!</h2>
           </Col>
         </Row>
 
         <Row>
-          {widgets.find(w => w.id === 'saldo' && w.active) && (
-            <Col md={4} className="mb-4">
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Saldo Atual</Card.Title>
-                  <h3 className="text-primary">R$ {financialData.saldoAtual.toFixed(2)}</h3>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          )}
-          {widgets.find(w => w.id === 'despesas' && w.active) && (
-            <Col md={4} className="mb-4">
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Despesas do Mês</Card.Title>
-                  <h3 className="text-danger">R$ {financialData.despesasMes.toFixed(2)}</h3>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          )}
-          {widgets.find(w => w.id === 'receitas' && w.active) && (
-            <Col md={4} className="mb-4">
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Receitas do Mês</Card.Title>
-                  <h3 className="text-success">R$ {financialData.receitasMes.toFixed(2)}</h3>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          )}
+         
+          <Col md={4} className="mb-4">
+            <StyledCard>
+              <Card.Body>
+                <Card.Title>Saldo Atual</Card.Title>
+                <h3 className="text-primary">R$ {financialData.saldoAtual.toFixed(2)}</h3>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+          <Col md={4} className="mb-4">
+            <StyledCard>
+              <Card.Body>
+                <Card.Title>Despesas do Mês</Card.Title>
+                <h3 className="text-danger">R$ {financialData.despesasMes.toFixed(2)}</h3>
+              </Card.Body>
+            </StyledCard>
+          </Col>
         </Row>
 
         <Row>
-          {widgets.find(w => w.id === 'investimentos' && w.active) && (
-            <Col md={6} className="mb-4">
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Investimentos</Card.Title>
-                  <ChartContainer>
-                    <Doughnut 
-                      data={{
-                        labels: ['Ações', 'Fundos Imobiliários', 'Tesouro Direto'],
-                        datasets: [{
-                          data: [5000, 3000, 2000],
-                          backgroundColor: [
-                            'rgba(255, 99, 132, 0.6)',
-                            'rgba(54, 162, 235, 0.6)',
-                            'rgba(255, 206, 86, 0.6)',
-                          ],
-                        }]
-                      }} 
-                      options={{ responsive: true, maintainAspectRatio: false }}
-                    />
-                  </ChartContainer>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          )}
-          {widgets.find(w => w.id === 'metas' && w.active) && (
-            <Col md={6} className="mb-4">
-              <StyledCard>
-                <Card.Body>
+          <Col md={6} className="mb-4">
+            <StyledCard>
+              <Card.Body>
+                <Card.Title>Investimentos</Card.Title>
+                <ChartContainer>
+                  <Doughnut 
+                    data={{
+                      labels: ['Ações', 'Fundos Imobiliários', 'Tesouro Direto'],
+                      datasets: [{
+                        data: [5000, 3000, 2000],
+                        backgroundColor: [
+                          'rgba(255, 99, 132, 0.6)',
+                          'rgba(54, 162, 235, 0.6)',
+                          'rgba(255, 206, 86, 0.6)',
+                        ],
+                      }]
+                    }} 
+                    options={{ responsive: true, maintainAspectRatio: false }}
+                  />
+                </ChartContainer>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+          <Col md={6} className="mb-4">
+            <StyledCard>
+              <Card.Body>
                 <Card.Title>Metas Financeiras</Card.Title>
-                  {financialData.metas.map((meta, index) => (
-                    <div key={index} className="mb-3">
-                      <h6>{meta.nome}</h6>
-                      <ProgressBar now={meta.progresso} label={`${meta.progresso}%`} />
-                      <small>Meta: R$ {meta.valor.toFixed(2)}</small>
-                    </div>
-                  ))}
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          )}
+                {financialData.metas.map((meta, index) => (
+                  <div key={index} className="mb-3">
+                    <h6>{meta.nome}</h6>
+                    <ProgressBar now={meta.progresso} label={`${meta.progresso}%`} />
+                    <small>Meta: R$ {meta.valor.toFixed(2)}</small>
+                  </div>
+                ))}
+              </Card.Body>
+            </StyledCard>
+          </Col>
         </Row>
 
-        {widgets.find(w => w.id === 'transacoes' && w.active) && (
-          <Row>
-            <Col>
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Últimas Transações</Card.Title>
-                  <Table striped bordered hover>
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Descrição</th>
-                        <th>Valor</th>
-                        <th>Tipo</th>
+        <Row>
+          <Col>
+            <StyledCard>
+              <Card.Body>
+                <Card.Title>Últimas Transações</Card.Title>
+                <Table striped bordered hover>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Descrição</th>
+                      <th>Valor</th>
+                      <th>Tipo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financialData.ultimasTransacoes.map((transacao, index) => (
+                      <tr key={index}>
+                        <td>{transacao.data}</td>
+                        <td>{transacao.descricao}</td>
+                        <td className={transacao.tipo === 'receita' ? 'text-success' : 'text-danger'}>
+                          R$ {Math.abs(transacao.valor).toFixed(2)}
+                        </td>
+                        <td>{transacao.tipo}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {financialData.ultimasTransacoes.map((transacao, index) => (
-                        <tr key={index}>
-                          <td>{transacao.data}</td>
-                          <td>{transacao.descricao}</td>
-                          <td className={transacao.tipo === 'receita' ? 'text-success' : 'text-danger'}>
-                            R$ {Math.abs(transacao.valor).toFixed(2)}
-                          </td>
-                          <td>{transacao.tipo}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          </Row>
-        )}
+                    ))}
+                  </tbody>
+                </Table>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+        </Row>
 
         <Row className="mt-4">
           <Col md={6} className="mb-4">

@@ -1,38 +1,33 @@
-/* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+// src/usuarios/usuarios.controller.ts
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
-import { CreateUsuarioDto } from './dto/create-usuario.dto';
-import { UpdateUsuarioDto } from './dto/update-usuario.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CriarUsuarioDto } from './dto/criar-usuario.dto';
+import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto';
 
 @Controller('usuarios')
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
   @Post()
-  criar(@Body() createUsuarioDto: CreateUsuarioDto) {
-    return this.usuariosService.criar(createUsuarioDto);
+  criar(@Body() criarUsuarioDto: CriarUsuarioDto) {
+    return this.usuariosService.criar(criarUsuarioDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get()
   encontrarTodos() {
     return this.usuariosService.encontrarTodos();
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get(':id')
   encontrarUm(@Param('id') id: string) {
     return this.usuariosService.encontrarUm(id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  atualizar(@Param('id') id: string, @Body() updateUsuarioDto: UpdateUsuarioDto) {
-    return this.usuariosService.atualizar(id, updateUsuarioDto);
+  atualizar(@Param('id') id: string, @Body() atualizarUsuarioDto: AtualizarUsuarioDto) {
+    return this.usuariosService.atualizar(id, atualizarUsuarioDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remover(@Param('id') id: string) {
     return this.usuariosService.remover(id);

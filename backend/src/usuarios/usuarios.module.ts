@@ -1,8 +1,8 @@
-/* eslint-disable prettier/prettier */
+// src/usuarios/usuarios.module.ts
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UsuariosController } from './usuarios.controller';
 import { UsuariosService } from './usuarios.service';
+import { UsuariosController } from './usuarios.controller';
 import { Usuario, UsuarioSchema } from './entities/usuario.entity';
 
 @Module({

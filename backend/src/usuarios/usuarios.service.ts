@@ -1,22 +1,24 @@
 /* eslint-disable prettier/prettier */
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+// src/usuarios/usuarios.service.ts
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Usuario } from './entities/usuario.entity';
-import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import * as bcrypt from 'bcrypt';
+import { CriarUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
 @Injectable()
 export class UsuariosService {
   constructor(@InjectModel(Usuario.name) private usuarioModel: Model<Usuario>) {}
 
-  async criar(criarUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
-    const usuarioExistente = await this.usuarioModel.findOne({ email: criarUsuarioDto.email });
-    if (usuarioExistente) {
-      throw new ConflictException('Email já existe');
-    }
-    const usuarioCriado = new this.usuarioModel(criarUsuarioDto);
-    return usuarioCriado.save();
+  async criar(criarUsuarioDto: CriarUsuarioDto): Promise<Usuario> {
+    const senhaHash = await bcrypt.hash(criarUsuarioDto.senha, 10);
+    const novoUsuario = new this.usuarioModel({
+      ...criarUsuarioDto,
+      senha: senhaHash,
+    });
+    return novoUsuario.save();
   }
 
   async encontrarTodos(): Promise<Usuario[]> {
@@ -24,30 +26,17 @@ export class UsuariosService {
   }
 
   async encontrarUm(id: string): Promise<Usuario> {
-    const usuario = await this.usuarioModel.findById(id);
-    if (!usuario) {
-      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
-    }
-    return usuario;
+    return this.usuarioModel.findById(id).exec();
   }
 
   async atualizar(id: string, atualizarUsuarioDto: UpdateUsuarioDto): Promise<Usuario> {
-    const usuarioAtualizado = await this.usuarioModel.findByIdAndUpdate(id, atualizarUsuarioDto, { new: true });
-    if (!usuarioAtualizado) {
-      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
+    if (atualizarUsuarioDto.senha) {
+      atualizarUsuarioDto.senha = await bcrypt.hash(atualizarUsuarioDto.senha, 10);
     }
-    return usuarioAtualizado;
+    return this.usuarioModel.findByIdAndUpdate(id, atualizarUsuarioDto, { new: true }).exec();
   }
 
   async remover(id: string): Promise<Usuario> {
-    const usuarioRemovido = await this.usuarioModel.findByIdAndDelete(id);
-    if (!usuarioRemovido) {
-      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
-    }
-    return usuarioRemovido;
-  }
-
-  async encontrarPorEmail(email: string): Promise<Usuario | null> {
-    return this.usuarioModel.findOne({ email }).exec();
+    return this.usuarioModel.findByIdAndDelete(id).exec();
   }
 }

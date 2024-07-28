@@ -1,31 +1,8 @@
-/* eslint-disable prettier/prettier */
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
-
-export class CreateUsuarioDto {
-  @IsString()
-  @MinLength(2)
+// src/usuarios/dto/criar-usuario.dto.ts
+export class CriarUsuarioDto {
   nome: string;
-
-  @IsEmail()
   email: string;
-
-  @IsString()
-  @MinLength(8)
   senha: string;
-
-  @IsString()
-  @IsOptional()
-  telefone?: string;
-
-  @IsString()
-  @IsOptional()
-  endereco?: string;
-
-  @IsString()
-  @IsOptional()
-  dataNascimento?: string;
-
-  @IsString()
-  @IsOptional()
-  profissao?: string;
+  imagem_perfil?: string;
+  preferencias?: Record<string, any>;
 }

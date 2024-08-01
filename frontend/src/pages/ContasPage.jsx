@@ -11,14 +11,21 @@ import { Pie, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+const StyledContainer = styled(Container)`
+  padding: 20px;
+`;
 
 const StyledCard = styled(Card)`
   border: none;
   border-radius: 8px;
   box-shadow: 0 0 15px rgba(0,0,0,.05);
   margin-bottom: 20px;
+  background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
 `;
 
 const ChartContainer = styled.div`
@@ -26,7 +33,12 @@ const ChartContainer = styled.div`
   width: 100%;
 `;
 
+const StyledTable = styled(Table)`
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+`;
+
 const ContasPage = () => {
+  const { isDarkMode } = useTheme();
   const [contas, setContas] = useState([]);
   const [novaConta, setNovaConta] = useState({ nome: '', saldo: '', tipo: '' });
 
@@ -97,9 +109,33 @@ const ContasPage = () => {
     }]
   };
 
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      y: {
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      }
+    }
+  };
+
   return (
     <Layout>
-      <Container>
+      <StyledContainer>
         <Row className="mb-4">
           <Col>
             <h2>Contas</h2>
@@ -108,7 +144,7 @@ const ContasPage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Nova Conta</Card.Title>
                 <Form onSubmit={adicionarConta}>
@@ -168,43 +204,32 @@ const ContasPage = () => {
         </Row>
 
         <Row>
-          <Col md={6} className="mb-4">
-            <StyledCard>
+          <Col lg={6} md={12} className="mb-4">
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Distribuição de Saldos</Card.Title>
                 <ChartContainer>
-                  <Pie data={despesasPorCategoria} options={{ responsive: true, maintainAspectRatio: false }} />
+                  <Pie data={despesasPorCategoria} options={chartOptions} />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
-          <Col md={6} className="mb-4">
-            <StyledCard>
+          <Col lg={6} md={12} className="mb-4">
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Saldo por Conta</Card.Title>
                 <ChartContainer>
-                  <Bar 
-                    data={distribuicaoSaldos} 
-                    options={{ 
-                      responsive: true, 
-                      maintainAspectRatio: false,
-                      scales: {
-                        y: {
-                          beginAtZero: true
-                        }
-                      }
-                    }} 
-                  />
+                  <Bar data={distribuicaoSaldos} options={chartOptions} />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
         </Row>
 
-        <StyledCard>
+        <StyledCard isDarkMode={isDarkMode}>
           <Card.Body>
             <Card.Title>Lista de Contas</Card.Title>
-            <Table striped bordered hover>
+            <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'} isDarkMode={isDarkMode}>
               <thead>
                 <tr>
                   <th>Nome</th>
@@ -230,10 +255,10 @@ const ContasPage = () => {
                   </tr>
                 ))}
               </tbody>
-            </Table>
+            </StyledTable>
           </Card.Body>
         </StyledCard>
-      </Container>
+      </StyledContainer>
     </Layout>
   );
 };

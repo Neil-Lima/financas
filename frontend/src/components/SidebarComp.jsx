@@ -129,7 +129,6 @@ const SidebarComp = () => {
         </DropdownContent>
 
         <SidebarLink href="/perfil" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faUser} className="fa-icon" />Perfil</SidebarLink>
-        <SidebarLink href="/configuracoes" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faCog} className="fa-icon" />Configurações</SidebarLink>
         <SidebarLink href="/historico" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faHistory} className="fa-icon" />Histórico</SidebarLink>
       </Nav>
     </Sidebar>

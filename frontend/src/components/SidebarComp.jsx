@@ -17,9 +17,12 @@ import {
   faAngleUp
 } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
+import { useTheme } from '../context/ThemeContext';
 
 const Sidebar = styled.div`
-  background: linear-gradient(180deg, #153158 0%, #0a1a2e 100%);
+  background: ${props => props.isDarkMode 
+    ? 'linear-gradient(180deg, #1a1a1a 0%, #2c2c2c 100%)'
+    : 'linear-gradient(180deg, #153158 0%, #0a1a2e 100%)'};
   height: 100%;
   color: white;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
@@ -38,9 +41,9 @@ const SidebarLink = styled(Nav.Link)`
   border-left: 3px solid transparent;
 
   &:hover, &:focus {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: ${props => props.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)'};
     color: #ffffff;
-    border-left: 3px solid #4e9af1;
+    border-left: 3px solid ${props => props.isDarkMode ? '#6c757d' : '#4e9af1'};
   }
 
   .fa-icon {
@@ -58,7 +61,7 @@ const SidebarDropdown = styled.div`
   align-items: center;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: ${props => props.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)'};
   }
 
   .fa-icon {
@@ -72,19 +75,20 @@ const SidebarDropdown = styled.div`
 `;
 
 const DropdownContent = styled(Collapse)`
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: ${props => props.isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)'};
   transition: all 0.5s ease-in-out;
 `;
 
 const SidebarComp = () => {
   const [openDropdown, setOpenDropdown] = useState('');
+  const { isDarkMode } = useTheme();
 
   const toggleDropdown = (name) => {
     setOpenDropdown(openDropdown === name ? '' : name);
   };
 
   return (
-    <Sidebar>
+    <Sidebar isDarkMode={isDarkMode}>
       <Card bg="transparent" text="white" className="border-0 mb-4">
         <Card.Body className="text-center">
           <FontAwesomeIcon icon={faUser} size="3x" className="mb-3" />
@@ -92,41 +96,41 @@ const SidebarComp = () => {
         </Card.Body>
       </Card>
       <Nav className="flex-column">
-        <SidebarLink href="/"><FontAwesomeIcon icon={faHome} className="fa-icon" />Início</SidebarLink>
+        <SidebarLink href="/" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faHome} className="fa-icon" />Início</SidebarLink>
         
-        <SidebarDropdown onClick={() => toggleDropdown('finances')}>
+        <SidebarDropdown onClick={() => toggleDropdown('finances')} isDarkMode={isDarkMode}>
           <div>
             <FontAwesomeIcon icon={faWallet} className="fa-icon" />
             Finanças
           </div>
           <FontAwesomeIcon icon={openDropdown === 'finances' ? faAngleUp : faAngleDown} className="dropdown-icon" />
         </SidebarDropdown>
-        <DropdownContent in={openDropdown === 'finances'}>
+        <DropdownContent in={openDropdown === 'finances'} isDarkMode={isDarkMode}>
           <Nav className="flex-column">
-            <SidebarLink href="/transacoes"><FontAwesomeIcon icon={faWallet} className="fa-icon" />Transações</SidebarLink>
-            <SidebarLink href="/orcamentos"><FontAwesomeIcon icon={faChartPie} className="fa-icon" />Orçamentos</SidebarLink>
-            <SidebarLink href="/despesas"><FontAwesomeIcon icon={faCalendarAlt} className="fa-icon" />Despesas do Mês</SidebarLink>
+            <SidebarLink href="/transacoes" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faWallet} className="fa-icon" />Transações</SidebarLink>
+            <SidebarLink href="/orcamentos" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faChartPie} className="fa-icon" />Orçamentos</SidebarLink>
+            <SidebarLink href="/despesas" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faCalendarAlt} className="fa-icon" />Despesas do Mês</SidebarLink>
           </Nav>
         </DropdownContent>
 
-        <SidebarDropdown onClick={() => toggleDropdown('debts')}>
+        <SidebarDropdown onClick={() => toggleDropdown('debts')} isDarkMode={isDarkMode}>
           <div>
             <FontAwesomeIcon icon={faExclamationTriangle} className="fa-icon" />
             Dívidas e Pagamentos
           </div>
           <FontAwesomeIcon icon={openDropdown === 'debts' ? faAngleUp : faAngleDown} className="dropdown-icon" />
         </SidebarDropdown>
-        <DropdownContent in={openDropdown === 'debts'}>
+        <DropdownContent in={openDropdown === 'debts'} isDarkMode={isDarkMode}>
           <Nav className="flex-column">
-            <SidebarLink href="/contas"><FontAwesomeIcon icon={faFileInvoiceDollar} className="fa-icon" />Contas a Pagar</SidebarLink>
-            <SidebarLink href="/parcelamentos"><FontAwesomeIcon icon={faCreditCard} className="fa-icon" />Parcelamentos</SidebarLink>
-            <SidebarLink href="/financiamentos"><FontAwesomeIcon icon={faHandHoldingUsd} className="fa-icon" />Financiamentos</SidebarLink>
+            <SidebarLink href="/contas" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faFileInvoiceDollar} className="fa-icon" />Contas a Pagar</SidebarLink>
+            <SidebarLink href="/parcelamentos" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faCreditCard} className="fa-icon" />Parcelamentos</SidebarLink>
+            <SidebarLink href="/financiamentos" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faHandHoldingUsd} className="fa-icon" />Financiamentos</SidebarLink>
           </Nav>
         </DropdownContent>
 
-        <SidebarLink href="/perfil"><FontAwesomeIcon icon={faUser} className="fa-icon" />Perfil</SidebarLink>
-        <SidebarLink href="/configuracoes"><FontAwesomeIcon icon={faCog} className="fa-icon" />Configurações</SidebarLink>
-        <SidebarLink href="/historico"><FontAwesomeIcon icon={faHistory} className="fa-icon" />Histórico</SidebarLink>
+        <SidebarLink href="/perfil" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faUser} className="fa-icon" />Perfil</SidebarLink>
+        <SidebarLink href="/configuracoes" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faCog} className="fa-icon" />Configurações</SidebarLink>
+        <SidebarLink href="/historico" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faHistory} className="fa-icon" />Histórico</SidebarLink>
       </Nav>
     </Sidebar>
   );

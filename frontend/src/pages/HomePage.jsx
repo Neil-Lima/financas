@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Button, Table, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Table, ProgressBar } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faUser,
@@ -10,14 +10,6 @@ import styled from 'styled-components';
 import { Line, Pie, Doughnut } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
 import { useTheme } from '../context/ThemeContext';
-
-const PageContainer = styled.div`
-  min-height: 100vh;
-  background-color: ${props => props.isDarkMode ? '#121212' : '#f8f9fa'};
-  color: ${props => props.isDarkMode ? '#fff' : '#333'};
-  transition: background-color 0.3s ease, color 0.3s ease;
-  padding: 20px;
-`;
 
 const StyledCard = styled(Card)`
   border: none;
@@ -99,7 +91,7 @@ const HomePage = () => {
 
   return (
     <Layout>
-      <PageContainer isDarkMode={isDarkMode}>
+      <Container fluid>
         <Row className="mb-4">
           <Col>
             <h2>Bem-vindo, {userName}!</h2>
@@ -267,7 +259,7 @@ const HomePage = () => {
             </StyledCard>
           </Col>
         </Row>
-      </PageContainer>
+      </Container>
     </Layout>
   );
 };

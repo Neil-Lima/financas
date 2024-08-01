@@ -1,11 +1,14 @@
 import React from 'react';
-import { Navbar, Nav } from 'react-bootstrap';
+import { Navbar, Nav, Button } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBell, faCommentDots, faMoon } from '@fortawesome/free-solid-svg-icons';
+import { faBell, faCommentDots, faMoon, faSun } from '@fortawesome/free-solid-svg-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const NavbarComp = () => {
+  const { isDarkMode, toggleTheme } = useTheme();
+
   return (
-    <Navbar bg="light" expand="lg" className="mb-4 shadow-sm">
+    <Navbar bg={isDarkMode ? 'dark' : 'light'} variant={isDarkMode ? 'dark' : 'light'} expand="lg" className="mb-4 shadow-sm">
       <Navbar.Brand href="#home">Finanças Pessoais</Navbar.Brand>
       <Navbar.Toggle aria-controls="basic-navbar-nav" />
       <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
@@ -13,7 +16,9 @@ const NavbarComp = () => {
           <Nav.Link href="#home">Home</Nav.Link>
           <Nav.Link href="#link"><FontAwesomeIcon icon={faBell} /></Nav.Link>
           <Nav.Link href="#link"><FontAwesomeIcon icon={faCommentDots} /></Nav.Link>
-          <Nav.Link href="#link"><FontAwesomeIcon icon={faMoon} /></Nav.Link>
+          <Button variant="link" onClick={toggleTheme}>
+            <FontAwesomeIcon icon={isDarkMode ? faSun : faMoon} />
+          </Button>
         </Nav>
       </Navbar.Collapse>
     </Navbar>

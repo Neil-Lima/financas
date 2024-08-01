@@ -13,6 +13,7 @@ import styled from 'styled-components';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -33,42 +34,61 @@ const ChartContainer = styled.div`
 `;
 
 const MetasPage = () => {
-  const [metas, setMetas] = useState([
-    { id: 1, description: 'Comprar um carro', targetAmount: 30000, currentAmount: 15000, deadline: '2024-12-31', achieved: false },
-    { id: 2, description: 'Viagem para Europa', targetAmount: 15000, currentAmount: 15000, deadline: '2024-06-30', achieved: true },
-    { id: 3, description: 'Fundo de emergência', targetAmount: 20000, currentAmount: 10000, deadline: '2023-12-31', achieved: false },
-  ]);
-  const [newMeta, setNewMeta] = useState({ description: '', targetAmount: '', deadline: '' });
+  const [metas, setMetas] = useState([]);
+  const [newMeta, setNewMeta] = useState({ descricao: '', valor_alvo: '', data_limite: '' });
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [currentReward, setCurrentReward] = useState('');
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [suggestedGoal, setSuggestedGoal] = useState('');
+
+  useEffect(() => {
+    fetchMetas();
+  }, []);
+
+  const fetchMetas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/metas', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMetas(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar metas:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewMeta(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newGoal = {
-      id: metas.length + 1,
-      ...newMeta,
-      currentAmount: 0,
-      achieved: false
-    };
-    setMetas([...metas, newGoal]);
-    setNewMeta({ description: '', targetAmount: '', deadline: '' });
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/metas', newMeta, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNewMeta({ descricao: '', valor_alvo: '', data_limite: '' });
+      fetchMetas();
+    } catch (error) {
+      console.error('Erro ao adicionar meta:', error);
+    }
   };
 
-  const checkGoalAchievement = (goal) => {
-    if (goal.currentAmount >= goal.targetAmount && !goal.achieved) {
-      const updatedMetas = metas.map(m => 
-        m.id === goal.id ? { ...m, achieved: true } : m
-      );
-      setMetas(updatedMetas);
-      setCurrentReward(getRandomReward());
-      setShowRewardModal(true);
+  const checkGoalAchievement = async (meta) => {
+    if (meta.valor_atual >= meta.valor_alvo && !meta.concluida) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.put(`http://localhost:5000/api/metas/${meta.id}`, { ...meta, concluida: true }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCurrentReward(getRandomReward());
+        setShowRewardModal(true);
+        fetchMetas();
+      } catch (error) {
+        console.error('Erro ao atualizar meta:', error);
+      }
     }
   };
 
@@ -95,12 +115,24 @@ const MetasPage = () => {
     setShowSuggestionModal(true);
   };
 
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/metas/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchMetas();
+    } catch (error) {
+      console.error('Erro ao deletar meta:', error);
+    }
+  };
+
   const chartData = {
-    labels: metas.map(meta => meta.description),
+    labels: metas.map(meta => meta.descricao),
     datasets: [
       {
         label: 'Progresso',
-        data: metas.map(meta => (meta.currentAmount / meta.targetAmount) * 100),
+        data: metas.map(meta => (meta.valor_atual / meta.valor_alvo) * 100),
         backgroundColor: 'rgba(75, 192, 192, 0.6)',
         borderColor: 'rgba(75, 192, 192, 1)',
         borderWidth: 1,
@@ -159,8 +191,8 @@ const MetasPage = () => {
                         <Form.Label>Descrição</Form.Label>
                         <Form.Control
                           type="text"
-                          name="description"
-                          value={newMeta.description}
+                          name="descricao"
+                          value={newMeta.descricao}
                           onChange={handleInputChange}
                           required
                         />
@@ -171,8 +203,8 @@ const MetasPage = () => {
                         <Form.Label>Valor Alvo</Form.Label>
                         <Form.Control
                           type="number"
-                          name="targetAmount"
-                          value={newMeta.targetAmount}
+                          name="valor_alvo"
+                          value={newMeta.valor_alvo}
                           onChange={handleInputChange}
                           required
                         />
@@ -183,8 +215,8 @@ const MetasPage = () => {
                         <Form.Label>Data Limite</Form.Label>
                         <Form.Control
                           type="date"
-                          name="deadline"
-                          value={newMeta.deadline}
+                          name="data_limite"
+                          value={newMeta.data_limite}
                           onChange={handleInputChange}
                           required
                         />
@@ -206,7 +238,7 @@ const MetasPage = () => {
               <Card.Body>
                 <Card.Title>Visão Geral de Metas</Card.Title>
                 <ChartContainer>
-                  <Bar data={chartData} options={chartOptions} />
+                <Bar data={chartData} options={chartOptions} />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
@@ -218,7 +250,7 @@ const MetasPage = () => {
             <StyledCard>
               <Card.Body>
                 <Card.Title>Lista de Metas</Card.Title>
-                <Table striped hover>
+                <Table striped bordered hover>
                   <thead>
                     <tr>
                       <th>Descrição</th>
@@ -232,17 +264,17 @@ const MetasPage = () => {
                   <tbody>
                     {metas.map((meta) => (
                       <tr key={meta.id}>
-                        <td>{meta.description}</td>
-                        <td>R$ {meta.targetAmount.toFixed(2)}</td>
+                        <td>{meta.descricao}</td>
+                        <td>R$ {meta.valor_alvo.toFixed(2)}</td>
                         <td>
                           <ProgressBar 
-                            now={(meta.currentAmount / meta.targetAmount) * 100} 
-                            label={`${((meta.currentAmount / meta.targetAmount) * 100).toFixed(0)}%`}
+                            now={(meta.valor_atual / meta.valor_alvo) * 100} 
+                            label={`${((meta.valor_atual / meta.valor_alvo) * 100).toFixed(0)}%`}
                           />
                         </td>
-                        <td>{meta.deadline}</td>
+                        <td>{meta.data_limite}</td>
                         <td>
-                          {meta.achieved ? (
+                          {meta.concluida ? (
                             <Badge variant="success">Concluída</Badge>
                           ) : (
                             <Badge variant="warning">Em andamento</Badge>
@@ -252,7 +284,7 @@ const MetasPage = () => {
                           <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => checkGoalAchievement(meta)}>
                             <FontAwesomeIcon icon={faEdit} />
                           </Button>
-                          <Button variant="outline-danger" size="sm">
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(meta.id)}>
                             <FontAwesomeIcon icon={faTrash} />
                           </Button>
                         </td>
@@ -295,7 +327,7 @@ const MetasPage = () => {
               Ignorar
             </Button>
             <Button variant="primary" onClick={() => {
-              setNewMeta({...newMeta, description: suggestedGoal});
+              setNewMeta({...newMeta, descricao: suggestedGoal});
               setShowSuggestionModal(false);
             }}>
               Adicionar Meta
@@ -308,3 +340,4 @@ const MetasPage = () => {
 };
 
 export default MetasPage;
+

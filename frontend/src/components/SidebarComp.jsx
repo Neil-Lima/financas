@@ -105,7 +105,7 @@ const SidebarComp = () => {
           <Nav className="flex-column">
             <SidebarLink href="/transacoes"><FontAwesomeIcon icon={faWallet} className="fa-icon" />Transações</SidebarLink>
             <SidebarLink href="/orcamentos"><FontAwesomeIcon icon={faChartPie} className="fa-icon" />Orçamentos</SidebarLink>
-            <SidebarLink href="/despesas-mes"><FontAwesomeIcon icon={faCalendarAlt} className="fa-icon" />Despesas do Mês</SidebarLink>
+            <SidebarLink href="/despesas"><FontAwesomeIcon icon={faCalendarAlt} className="fa-icon" />Despesas do Mês</SidebarLink>
           </Nav>
         </DropdownContent>
 
@@ -118,7 +118,7 @@ const SidebarComp = () => {
         </SidebarDropdown>
         <DropdownContent in={openDropdown === 'debts'}>
           <Nav className="flex-column">
-            <SidebarLink href="/contas-pagar"><FontAwesomeIcon icon={faFileInvoiceDollar} className="fa-icon" />Contas a Pagar</SidebarLink>
+            <SidebarLink href="/contas"><FontAwesomeIcon icon={faFileInvoiceDollar} className="fa-icon" />Contas a Pagar</SidebarLink>
             <SidebarLink href="/parcelamentos"><FontAwesomeIcon icon={faCreditCard} className="fa-icon" />Parcelamentos</SidebarLink>
             <SidebarLink href="/financiamentos"><FontAwesomeIcon icon={faHandHoldingUsd} className="fa-icon" />Financiamentos</SidebarLink>
           </Nav>

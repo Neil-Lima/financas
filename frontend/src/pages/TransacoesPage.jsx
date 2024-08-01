@@ -11,6 +11,7 @@ import styled from "styled-components";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -30,69 +31,99 @@ const ChartContainer = styled.div`
   width: 100%;
 `;
 
-const transactionData = [
-  { id: 1, date: "2023-09-01", description: "Supermercado", amount: -150.0, category: "Alimentação" },
-  { id: 2, date: "2023-09-02", description: "Salário", amount: 4000.0, category: "Renda" },
-  { id: 3, date: "2023-09-03", description: "Conta de Luz", amount: -80.0, category: "Moradia" },
-  { id: 4, date: "2023-09-04", description: "Restaurante", amount: -60.0, category: "Alimentação" },
-  { id: 5, date: "2023-09-05", description: "Transferência", amount: -200.0, category: "Transferência" },
-];
-
-const chartData = {
-  labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"],
-  datasets: [
-    {
-      label: "Receitas",
-      data: [4000, 4200, 4100, 4300, 4000, 4500],
-      backgroundColor: "rgba(75, 192, 192, 0.6)",
-    },
-    {
-      label: "Despesas",
-      data: [3000, 3200, 2800, 3100, 2900, 3300],
-      backgroundColor: "rgba(255, 99, 132, 0.6)",
-    },
-  ],
-};
-
 const TransacoesPage = () => {
+  const [transacoes, setTransacoes] = useState([]);
+  const [contas, setContas] = useState([]);
+  const [categorias, setCategorias] = useState([]);
   const [newTransaction, setNewTransaction] = useState({
-    date: "",
-    description: "",
-    amount: "",
-    category: "",
+    conta_id: "",
+    categoria_id: "",
+    descricao: "",
+    valor: "",
+    data: "",
+    tipo: "",
   });
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
+
+  useEffect(() => {
+    fetchTransacoes();
+    fetchContas();
+    fetchCategorias();
+  }, []);
+
+  const fetchTransacoes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/transacoes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTransacoes(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar transações:', error);
+    }
+  };
+
+  const fetchContas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/contas', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setContas(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar contas:', error);
+    }
+  };
+
+  const fetchCategorias = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/categorias', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCategorias(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewTransaction((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const recognizedCategory = recognizeCategory(newTransaction.description);
-    const transactionWithCategory = {
-      ...newTransaction,
-      category: recognizedCategory,
-    };
-    console.log("Nova transação:", transactionWithCategory);
-    setNewTransaction({ date: "", description: "", amount: "", category: "" });
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/transacoes', newTransaction, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNewTransaction({
+        conta_id: "",
+        categoria_id: "",
+        descricao: "",
+        valor: "",
+        data: "",
+        tipo: "",
+      });
+      fetchTransacoes();
+    } catch (error) {
+      console.error('Erro ao adicionar transação:', error);
+    }
   };
 
-  const recognizeCategory = (description) => {
-    const lowerDescription = description.toLowerCase();
-    if (lowerDescription.includes("mercado") || lowerDescription.includes("supermercado"))
-      return "Alimentação";
-    if (lowerDescription.includes("salário") || lowerDescription.includes("pagamento"))
-      return "Renda";
-    if (lowerDescription.includes("luz") || lowerDescription.includes("água") || lowerDescription.includes("aluguel"))
-      return "Moradia";
-    if (lowerDescription.includes("restaurante") || lowerDescription.includes("lanchonete"))
-      return "Alimentação";
-    if (lowerDescription.includes("transferência") || lowerDescription.includes("pix"))
-      return "Transferência";
-    return "Outros";
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/transacoes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchTransacoes();
+    } catch (error) {
+      console.error('Erro ao deletar transação:', error);
+    }
   };
 
   const handleImportSubmit = (e) => {
@@ -101,6 +132,22 @@ const TransacoesPage = () => {
       console.log("Arquivo importado:", importFile);
       setShowImportModal(false);
     }
+  };
+
+  const chartData = {
+    labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"],
+    datasets: [
+      {
+        label: "Receitas",
+        data: [4000, 4200, 4100, 4300, 4000, 4500],
+        backgroundColor: "rgba(75, 192, 192, 0.6)",
+      },
+      {
+        label: "Despesas",
+        data: [3000, 3200, 2800, 3100, 2900, 3300],
+        backgroundColor: "rgba(255, 99, 132, 0.6)",
+      },
+    ],
   };
 
   return (
@@ -126,14 +173,36 @@ const TransacoesPage = () => {
                   <Row>
                     <Col md={3}>
                       <Form.Group>
-                        <Form.Label>Data</Form.Label>
+                        <Form.Label>Conta</Form.Label>
                         <Form.Control
-                          type="date"
-                          name="date"
-                          value={newTransaction.date}
+                          as="select"
+                          name="conta_id"
+                          value={newTransaction.conta_id}
                           onChange={handleInputChange}
                           required
-                        />
+                        >
+                          <option value="">Selecione uma conta</option>
+                          {contas.map(conta => (
+                            <option key={conta.id} value={conta.id}>{conta.nome}</option>
+                          ))}
+                        </Form.Control>
+                      </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Categoria</Form.Label>
+                        <Form.Control
+                          as="select"
+                          name="categoria_id"
+                          value={newTransaction.categoria_id}
+                          onChange={handleInputChange}
+                          required
+                        >
+                          <option value="">Selecione uma categoria</option>
+                          {categorias.map(categoria => (
+                            <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+                          ))}
+                        </Form.Control>
                       </Form.Group>
                     </Col>
                     <Col md={3}>
@@ -141,8 +210,8 @@ const TransacoesPage = () => {
                         <Form.Label>Descrição</Form.Label>
                         <Form.Control
                           type="text"
-                          name="description"
-                          value={newTransaction.description}
+                          name="descricao"
+                          value={newTransaction.descricao}
                           onChange={handleInputChange}
                           required
                         />
@@ -153,8 +222,22 @@ const TransacoesPage = () => {
                         <Form.Label>Valor</Form.Label>
                         <Form.Control
                           type="number"
-                          name="amount"
-                          value={newTransaction.amount}
+                          name="valor"
+                          value={newTransaction.valor}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  <Row>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Data</Form.Label>
+                        <Form.Control
+                          type="date"
+                          name="data"
+                          value={newTransaction.data}
                           onChange={handleInputChange}
                           required
                         />
@@ -162,22 +245,17 @@ const TransacoesPage = () => {
                     </Col>
                     <Col md={3}>
                       <Form.Group>
-                        <Form.Label>Categoria</Form.Label>
+                        <Form.Label>Tipo</Form.Label>
                         <Form.Control
                           as="select"
-                          name="category"
-                          value={newTransaction.category}
+                          name="tipo"
+                          value={newTransaction.tipo}
                           onChange={handleInputChange}
                           required
                         >
-                          <option value="">Selecione uma categoria</option>
-                          <option value="Alimentação">Alimentação</option>
-                          <option value="Moradia">Moradia</option>
-                          <option value="Transporte">Transporte</option>
-                          <option value="Lazer">Lazer</option>
-                          <option value="Saúde">Saúde</option>
-                          <option value="Educação">Educação</option>
-                          <option value="Renda">Renda</option>
+                          <option value="">Selecione o tipo</option>
+                          <option value="receita">Receita</option>
+                          <option value="despesa">Despesa</option>
                         </Form.Control>
                       </Form.Group>
                     </Col>
@@ -232,19 +310,19 @@ const TransacoesPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactionData.map((transaction) => (
-                      <tr key={transaction.id}>
-                        <td>{transaction.date}</td>
-                        <td>{transaction.description}</td>
-                        <td>{transaction.category}</td>
-                        <td className={transaction.amount >= 0 ? "text-success" : "text-danger"}>
-                          R$ {Math.abs(transaction.amount).toFixed(2)}
+                    {transacoes.map((transacao) => (
+                      <tr key={transacao.id}>
+                        <td>{transacao.data}</td>
+                        <td>{transacao.descricao}</td>
+                        <td>{categorias.find(cat => cat.id === transacao.categoria_id)?.nome}</td>
+                        <td className={transacao.tipo === 'receita' ? "text-success" : "text-danger"}>
+                          R$ {Math.abs(transacao.valor).toFixed(2)}
                         </td>
                         <td>
                           <Button variant="outline-primary" size="sm" className="mr-2">
                             <FontAwesomeIcon icon={faEdit} />
                           </Button>
-                          <Button variant="outline-danger" size="sm">
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(transacao.id)}>
                             <FontAwesomeIcon icon={faTrash} />
                           </Button>
                         </td>

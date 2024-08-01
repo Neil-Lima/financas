@@ -27,7 +27,7 @@ function Rotas() {
         <Route path="/relatorios" element={<RelatoriosPage />} />
         <Route path="/transacoes" element={<TransacoesPage />} />
         <Route path="/contas" element={<ContasPage />} />
-        <Route path="/despesa" element={<DespesaPage />} />
+        <Route path="/despesas" element={<DespesaPage />} />
         <Route path="/parcelamentos" element={<ParcelamentosPage/>} />
         <Route path="/financiamentos" element={<FinanciamentosPage/>} />
         <Route path="/configuracoes" element={<ConfiguracoesPage/>} />

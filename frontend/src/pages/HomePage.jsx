@@ -1,5 +1,5 @@
-import React from 'react';
-import { Container, Row, Col, Card, Button, Table, ProgressBar } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Button, Table, ProgressBar } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faUser,
@@ -9,11 +9,23 @@ import {
 import styled from 'styled-components';
 import { Line, Pie, Doughnut } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
+import { useTheme } from '../context/ThemeContext';
+
+const PageContainer = styled.div`
+  min-height: 100vh;
+  background-color: ${props => props.isDarkMode ? '#121212' : '#f8f9fa'};
+  color: ${props => props.isDarkMode ? '#fff' : '#333'};
+  transition: background-color 0.3s ease, color 0.3s ease;
+  padding: 20px;
+`;
 
 const StyledCard = styled(Card)`
   border: none;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  background-color: ${props => props.isDarkMode ? '#1e1e1e' : '#fff'};
+  color: ${props => props.isDarkMode ? '#fff' : '#333'};
+  border: ${props => props.isDarkMode ? '1px solid #333' : 'none'};
 
   &:hover {
     transform: translateY(-5px);
@@ -27,6 +39,15 @@ const ChartContainer = styled.div`
 `;
 
 const HomePage = () => {
+  const [userName, setUserName] = useState('');
+  const { isDarkMode } = useTheme();
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user.nome) {
+      setUserName(user.nome);
+    }
+  }, []);
 
   const financialData = {
     saldoAtual: 5000,
@@ -78,17 +99,16 @@ const HomePage = () => {
 
   return (
     <Layout>
-      <Container fluid>
+      <PageContainer isDarkMode={isDarkMode}>
         <Row className="mb-4">
           <Col>
-            <h2>Bem-vindo, João!</h2>
+            <h2>Bem-vindo, {userName}!</h2>
           </Col>
         </Row>
 
         <Row>
-         
           <Col md={4} className="mb-4">
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Saldo Atual</Card.Title>
                 <h3 className="text-primary">R$ {financialData.saldoAtual.toFixed(2)}</h3>
@@ -96,7 +116,7 @@ const HomePage = () => {
             </StyledCard>
           </Col>
           <Col md={4} className="mb-4">
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Despesas do Mês</Card.Title>
                 <h3 className="text-danger">R$ {financialData.despesasMes.toFixed(2)}</h3>
@@ -107,7 +127,7 @@ const HomePage = () => {
 
         <Row>
           <Col md={6} className="mb-4">
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Investimentos</Card.Title>
                 <ChartContainer>
@@ -123,14 +143,24 @@ const HomePage = () => {
                         ],
                       }]
                     }} 
-                    options={{ responsive: true, maintainAspectRatio: false }}
+                    options={{ 
+                      responsive: true, 
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          labels: {
+                            color: isDarkMode ? '#fff' : '#333'
+                          }
+                        }
+                      }
+                    }}
                   />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
           <Col md={6} className="mb-4">
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Metas Financeiras</Card.Title>
                 {financialData.metas.map((meta, index) => (
@@ -147,10 +177,10 @@ const HomePage = () => {
 
         <Row>
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Últimas Transações</Card.Title>
-                <Table striped bordered hover>
+                <Table striped bordered hover variant={isDarkMode ? 'dark' : 'light'}>
                   <thead>
                     <tr>
                       <th>Data</th>
@@ -179,27 +209,65 @@ const HomePage = () => {
 
         <Row className="mt-4">
           <Col md={6} className="mb-4">
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Despesas por Categoria</Card.Title>
                 <ChartContainer>
-                  <Pie data={despesasPorCategoria} options={{ responsive: true, maintainAspectRatio: false }} />
+                  <Pie 
+                    data={despesasPorCategoria} 
+                    options={{ 
+                      responsive: true, 
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          labels: {
+                            color: isDarkMode ? '#fff' : '#333'
+                          }
+                        }
+                      }
+                    }} 
+                  />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
           <Col md={6} className="mb-4">
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Fluxo de Caixa</Card.Title>
                 <ChartContainer>
-                  <Line data={fluxoCaixa} options={{ responsive: true, maintainAspectRatio: false }} />
+                  <Line 
+                    data={fluxoCaixa} 
+                    options={{ 
+                      responsive: true, 
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          labels: {
+                            color: isDarkMode ? '#fff' : '#333'
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: isDarkMode ? '#fff' : '#333'
+                          }
+                        },
+                        y: {
+                          ticks: {
+                            color: isDarkMode ? '#fff' : '#333'
+                          }
+                        }
+                      }
+                    }} 
+                  />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
         </Row>
-      </Container>
+      </PageContainer>
     </Layout>
   );
 };

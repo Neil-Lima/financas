@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Alert } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -11,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
 const StyledCard = styled(Card)`
   border: none;
@@ -20,34 +21,50 @@ const StyledCard = styled(Card)`
 `;
 
 const ConfiguracoesPage = () => {
-  const [notificacoes, setNotificacoes] = useState({
-    email: true,
-    push: false,
-    sms: false
-  });
-  const [exibicaoDados, setExibicaoDados] = useState({
-    saldoOculto: false,
-    mostrarGraficos: true,
-    moedaPadrao: 'BRL'
+  const [configuracoes, setConfiguracoes] = useState({
+    tema: 'claro',
+    notificacoes: {
+      email: true,
+      push: false,
+      sms: false
+    },
+    idioma: 'pt-BR'
   });
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [idioma, setIdioma] = useState('pt-BR');
   const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertVariant, setAlertVariant] = useState('success');
 
-  const handleNotificacaoChange = (e) => {
-    setNotificacoes({
-      ...notificacoes,
-      [e.target.name]: e.target.checked
-    });
+  useEffect(() => {
+    fetchConfiguracoes();
+  }, []);
+
+  const fetchConfiguracoes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/configuracoes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setConfiguracoes(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar configurações:', error);
+    }
   };
 
-  const handleExibicaoDadosChange = (e) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setExibicaoDados({
-      ...exibicaoDados,
-      [e.target.name]: value
-    });
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setConfiguracoes(prev => ({
+        ...prev,
+        notificacoes: {
+          ...prev.notificacoes,
+          [name]: checked
+        }
+      }));
+    } else {
+      setConfiguracoes(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSenhaChange = (e) => {
@@ -58,11 +75,21 @@ const ConfiguracoesPage = () => {
     setConfirmarSenha(e.target.value);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Configurações salvas:', { notificacoes, exibicaoDados, idioma });
-    setShowAlert(true);
-    setTimeout(() => setShowAlert(false), 3000);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put('http://localhost:5000/api/configuracoes', configuracoes, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAlertMessage('Configurações salvas com sucesso!');
+      setAlertVariant('success');
+      setShowAlert(true);
+    } catch (error) {
+      setAlertMessage('Erro ao salvar configurações. Tente novamente.');
+      setAlertVariant('danger');
+      setShowAlert(true);
+    }
   };
 
   return (
@@ -70,11 +97,29 @@ const ConfiguracoesPage = () => {
       <Container>
         <h1 className="my-4">Configurações</h1>
         {showAlert && (
-          <Alert variant="success" onClose={() => setShowAlert(false)} dismissible>
-            Configurações salvas com sucesso!
+          <Alert variant={alertVariant} onClose={() => setShowAlert(false)} dismissible>
+            {alertMessage}
           </Alert>
         )}
         <Form onSubmit={handleSubmit}>
+          <StyledCard>
+            <Card.Body>
+              <Card.Title><FontAwesomeIcon icon={faPalette} className="mr-2" /> Aparência</Card.Title>
+              <Form.Group>
+                <Form.Label>Tema</Form.Label>
+                <Form.Control 
+                  as="select" 
+                  name="tema"
+                  value={configuracoes.tema}
+                  onChange={handleInputChange}
+                >
+                  <option value="claro">Claro</option>
+                  <option value="escuro">Escuro</option>
+                </Form.Control>
+              </Form.Group>
+            </Card.Body>
+          </StyledCard>
+
           <StyledCard>
             <Card.Body>
               <Card.Title><FontAwesomeIcon icon={faBell} className="mr-2" /> Notificações</Card.Title>
@@ -83,79 +128,22 @@ const ConfiguracoesPage = () => {
                   type="checkbox" 
                   label="Receber notificações por e-mail" 
                   name="email"
-                  checked={notificacoes.email}
-                  onChange={handleNotificacaoChange}
+                  checked={configuracoes.notificacoes.email}
+                  onChange={handleInputChange}
                 />
                 <Form.Check 
                   type="checkbox" 
                   label="Receber notificações push" 
                   name="push"
-                  checked={notificacoes.push}
-                  onChange={handleNotificacaoChange}
+                  checked={configuracoes.notificacoes.push}
+                  onChange={handleInputChange}
                 />
                 <Form.Check 
                   type="checkbox" 
                   label="Receber notificações por SMS" 
                   name="sms"
-                  checked={notificacoes.sms}
-                  onChange={handleNotificacaoChange}
-                />
-              </Form.Group>
-            </Card.Body>
-          </StyledCard>
-
-          <StyledCard>
-            <Card.Body>
-              <Card.Title><FontAwesomeIcon icon={faEye} className="mr-2" /> Exibição de Dados</Card.Title>
-              <Form.Group>
-                <Form.Check 
-                  type="checkbox" 
-                  label="Ocultar saldo" 
-                  name="saldoOculto"
-                  checked={exibicaoDados.saldoOculto}
-                  onChange={handleExibicaoDadosChange}
-                />
-                <Form.Check 
-                  type="checkbox" 
-                  label="Mostrar gráficos" 
-                  name="mostrarGraficos"
-                  checked={exibicaoDados.mostrarGraficos}
-                  onChange={handleExibicaoDadosChange}
-                />
-                <Form.Label>Moeda Padrão</Form.Label>
-                <Form.Control 
-                  as="select" 
-                  name="moedaPadrao"
-                  value={exibicaoDados.moedaPadrao}
-                  onChange={handleExibicaoDadosChange}
-                >
-                  <option value="BRL">Real (BRL)</option>
-                  <option value="USD">Dólar (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
-                </Form.Control>
-              </Form.Group>
-            </Card.Body>
-          </StyledCard>
-
-          <StyledCard>
-            <Card.Body>
-              <Card.Title><FontAwesomeIcon icon={faLock} className="mr-2" /> Segurança</Card.Title>
-              <Form.Group>
-                <Form.Label>Nova Senha</Form.Label>
-                <Form.Control 
-                  type="password" 
-                  placeholder="Digite a nova senha" 
-                  value={senha}
-                  onChange={handleSenhaChange}
-                />
-              </Form.Group>
-              <Form.Group>
-                <Form.Label>Confirmar Nova Senha</Form.Label>
-                <Form.Control 
-                  type="password" 
-                  placeholder="Confirme a nova senha" 
-                  value={confirmarSenha}
-                  onChange={handleConfirmarSenhaChange}
+                  checked={configuracoes.notificacoes.sms}
+                  onChange={handleInputChange}
                 />
               </Form.Group>
             </Card.Body>
@@ -167,8 +155,9 @@ const ConfiguracoesPage = () => {
               <Form.Group>
                 <Form.Control 
                   as="select" 
-                  value={idioma}
-                  onChange={(e) => setIdioma(e.target.value)}
+                  name="idioma"
+                  value={configuracoes.idioma}
+                  onChange={handleInputChange}
                 >
                   <option value="pt-BR">Português (Brasil)</option>
                   <option value="en-US">English (US)</option>

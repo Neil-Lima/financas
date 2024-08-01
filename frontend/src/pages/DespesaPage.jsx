@@ -1,77 +1,129 @@
-import React, { useState } from 'react';
+// DespesaPage.jsx
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPlus,
   faEdit,
-  faTrash
+  faTrash,
+  faSearch
 } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const StyledCard = styled(Card)`
   border: none;
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0,0,0,.05);
-  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
 `;
 
 const ChartContainer = styled.div`
-  height: 400px;
+  height: 300px;
   width: 100%;
 `;
 
 const DespesaPage = () => {
-  const [despesas, setDespesas] = useState([
-    { id: 1, descricao: 'Aluguel', valor: 1500, data: '2023-09-01', categoria: 'Moradia' },
-    { id: 2, descricao: 'Supermercado', valor: 800, data: '2023-09-05', categoria: 'Alimentação' },
-    { id: 3, descricao: 'Energia Elétrica', valor: 200, data: '2023-09-10', categoria: 'Utilidades' },
-    { id: 4, descricao: 'Internet', valor: 100, data: '2023-09-15', categoria: 'Utilidades' },
-    { id: 5, descricao: 'Transporte', valor: 300, data: '2023-09-20', categoria: 'Transporte' },
-  ]);
-  const [novaDespesa, setNovaDespesa] = useState({ descricao: '', valor: '', data: '', categoria: '' });
+  const [despesas, setDespesas] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [novaDespesa, setNovaDespesa] = useState({
+    descricao: '',
+    valor: '',
+    data: '',
+    categoria_id: ''
+  });
 
-  const handleNovaDespesaChange = (e) => {
-    setNovaDespesa({ ...novaDespesa, [e.target.name]: e.target.value });
+  useEffect(() => {
+    fetchDespesas();
+    fetchCategorias();
+  }, []);
+
+  const fetchDespesas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/despesas', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDespesas(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar despesas:', error);
+    }
   };
 
-  const adicionarDespesa = (e) => {
+  const fetchCategorias = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/categorias', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCategorias(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNovaDespesa(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setDespesas([...despesas, { ...novaDespesa, id: despesas.length + 1, valor: parseFloat(novaDespesa.valor) }]);
-    setNovaDespesa({ descricao: '', valor: '', data: '', categoria: '' });
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/despesas', novaDespesa, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNovaDespesa({
+        descricao: '',
+        valor: '',
+        data: '',
+        categoria_id: ''
+      });
+      fetchDespesas();
+    } catch (error) {
+      console.error('Erro ao adicionar despesa:', error);
+    }
   };
 
-  const previsaoDespesas = () => {
-    const hoje = new Date();
-    const proximosMeses = Array.from({length: 6}, (_, i) => {
-      const data = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
-      return data.toLocaleString('default', { month: 'short' });
-    });
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/despesas/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDespesas();
+    } catch (error) {
+      console.error('Erro ao deletar despesa:', error);
+    }
+  };
 
-    const valoresPrevistosAleatorios = Array.from({length: 6}, () => 
-      Math.floor(Math.random() * (3500 - 2500 + 1) + 2500)
-    );
-
-    return {
-      labels: proximosMeses,
-      datasets: [
-        {
-          label: 'Despesas Previstas',
-          data: valoresPrevistosAleatorios,
-          borderColor: 'rgb(255, 99, 132)',
-          backgroundColor: 'rgba(255, 99, 132, 0.5)',
-        },
-      ],
-    };
+  const chartData = {
+    labels: categorias.map(categoria => categoria.nome),
+    datasets: [
+      {
+        label: 'Total de Despesas por Categoria',
+        data: categorias.map(categoria => 
+          despesas.filter(despesa => despesa.categoria_id === categoria.id)
+            .reduce((acc, curr) => acc + parseFloat(curr.valor), 0)
+        ),
+        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+      }
+    ]
   };
 
   return (
     <Layout>
-      <Container>
+      <Container fluid>
         <Row className="mb-4">
           <Col>
             <h2>Despesas</h2>
@@ -83,17 +135,17 @@ const DespesaPage = () => {
             <StyledCard>
               <Card.Body>
                 <Card.Title>Nova Despesa</Card.Title>
-                <Form onSubmit={adicionarDespesa}>
+                <Form onSubmit={handleSubmit}>
                   <Row>
                     <Col md={3}>
                       <Form.Group>
                         <Form.Label>Descrição</Form.Label>
                         <Form.Control 
                           type="text" 
-                          name="descricao"
-                          value={novaDespesa.descricao}
-                          onChange={handleNovaDespesaChange}
-                          required
+                          name="descricao" 
+                          value={novaDespesa.descricao} 
+                          onChange={handleInputChange} 
+                          required 
                         />
                       </Form.Group>
                     </Col>
@@ -102,10 +154,10 @@ const DespesaPage = () => {
                         <Form.Label>Valor</Form.Label>
                         <Form.Control 
                           type="number" 
-                          name="valor"
-                          value={novaDespesa.valor}
-                          onChange={handleNovaDespesaChange}
-                          required
+                          name="valor" 
+                          value={novaDespesa.valor} 
+                          onChange={handleInputChange} 
+                          required 
                         />
                       </Form.Group>
                     </Col>
@@ -114,10 +166,10 @@ const DespesaPage = () => {
                         <Form.Label>Data</Form.Label>
                         <Form.Control 
                           type="date" 
-                          name="data"
-                          value={novaDespesa.data}
-                          onChange={handleNovaDespesaChange}
-                          required
+                          name="data" 
+                          value={novaDespesa.data} 
+                          onChange={handleInputChange} 
+                          required 
                         />
                       </Form.Group>
                     </Col>
@@ -125,19 +177,16 @@ const DespesaPage = () => {
                       <Form.Group>
                         <Form.Label>Categoria</Form.Label>
                         <Form.Control 
-                          as="select"
-                          name="categoria"
-                          value={novaDespesa.categoria}
-                          onChange={handleNovaDespesaChange}
+                          as="select" 
+                          name="categoria_id" 
+                          value={novaDespesa.categoria_id} 
+                          onChange={handleInputChange} 
                           required
                         >
                           <option value="">Selecione uma categoria</option>
-                          <option value="Moradia">Moradia</option>
-                          <option value="Alimentação">Alimentação</option>
-                          <option value="Transporte">Transporte</option>
-                          <option value="Utilidades">Utilidades</option>
-                          <option value="Lazer">Lazer</option>
-                          <option value="Saúde">Saúde</option>
+                          {categorias.map(categoria => (
+                            <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+                          ))}
                         </Form.Control>
                       </Form.Group>
                     </Col>
@@ -156,26 +205,16 @@ const DespesaPage = () => {
           <Col>
             <StyledCard>
               <Card.Body>
-                <Card.Title>Previsão de Despesas Futuras</Card.Title>
+                <Card.Title>Visão Geral de Despesas</Card.Title>
                 <ChartContainer>
-                  <Line 
-                    data={previsaoDespesas()} 
+                  <Bar 
+                    data={chartData} 
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
                       scales: {
                         y: {
-                          beginAtZero: true,
-                          title: {
-                            display: true,
-                            text: 'Valor (R$)'
-                          }
-                        },
-                        x: {
-                          title: {
-                            display: true,
-                            text: 'Mês'
-                          }
+                          beginAtZero: true
                         }
                       },
                       plugins: {
@@ -184,10 +223,10 @@ const DespesaPage = () => {
                         },
                         title: {
                           display: true,
-                          text: 'Previsão de Despesas para os Próximos 6 Meses'
+                          text: 'Total de Despesas por Categoria'
                         }
                       }
-                    }}
+                    }} 
                   />
                 </ChartContainer>
               </Card.Body>
@@ -195,40 +234,44 @@ const DespesaPage = () => {
           </Col>
         </Row>
 
-        <StyledCard>
-          <Card.Body>
-            <Card.Title>Lista de Despesas</Card.Title>
-            <Table striped bordered hover>
-              <thead>
-                <tr>
-                  <th>Descrição</th>
-                  <th>Valor</th>
-                  <th>Data</th>
-                  <th>Categoria</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {despesas.map((despesa) => (
-                  <tr key={despesa.id}>
-                    <td>{despesa.descricao}</td>
-                    <td>R$ {despesa.valor.toFixed(2)}</td>
-                    <td>{despesa.data}</td>
-                    <td>{despesa.categoria}</td>
-                    <td>
-                      <Button variant="outline-primary" size="sm" className="mr-2">
-                        <FontAwesomeIcon icon={faEdit} />
-                      </Button>
-                      <Button variant="outline-danger" size="sm">
-                        <FontAwesomeIcon icon={faTrash} />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Card.Body>
-        </StyledCard>
+        <Row>
+          <Col>
+            <StyledCard>
+              <Card.Body>
+                <Card.Title>Lista de Despesas</Card.Title>
+                <Table striped hover>
+                  <thead>
+                    <tr>
+                      <th>Descrição</th>
+                      <th>Valor</th>
+                      <th>Data</th>
+                      <th>Categoria</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {despesas.map((despesa) => (
+                      <tr key={despesa.id}>
+                        <td>{despesa.descricao}</td>
+                        <td>R$ {parseFloat(despesa.valor).toFixed(2)}</td>
+                        <td>{new Date(despesa.data).toLocaleDateString()}</td>
+                        <td>{categorias.find(cat => cat.id === despesa.categoria_id)?.nome}</td>
+                        <td>
+                          <Button variant="outline-primary" size="sm" className="mr-2">
+                            <FontAwesomeIcon icon={faEdit} />
+                          </Button>
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(despesa.id)}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+        </Row>
       </Container>
     </Layout>
   );

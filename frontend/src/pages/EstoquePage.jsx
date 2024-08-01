@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -26,22 +27,78 @@ const ChartContainer = styled.div`
 `;
 
 const EstoquePage = () => {
-  const [produtos, setProdutos] = useState([
-    { id: 1, nome: 'Produto A', quantidade: 100, precoUnitario: 10, categoria: 'Categoria 1' },
-    { id: 2, nome: 'Produto B', quantidade: 150, precoUnitario: 15, categoria: 'Categoria 2' },
-    { id: 3, nome: 'Produto C', quantidade: 75, precoUnitario: 20, categoria: 'Categoria 1' },
-    { id: 4, nome: 'Produto D', quantidade: 200, precoUnitario: 8, categoria: 'Categoria 3' },
-  ]);
+  const [produtos, setProdutos] = useState([]);
   const [novoProduto, setNovoProduto] = useState({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
+  const [editandoProduto, setEditandoProduto] = useState(null);
+
+  useEffect(() => {
+    fetchProdutos();
+  }, []);
+
+  const fetchProdutos = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/estoque', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProdutos(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
+    }
+  };
 
   const handleNovoProdutoChange = (e) => {
     setNovoProduto({ ...novoProduto, [e.target.name]: e.target.value });
   };
 
-  const adicionarProduto = (e) => {
+  const adicionarProduto = async (e) => {
     e.preventDefault();
-    setProdutos([...produtos, { ...novoProduto, id: produtos.length + 1, quantidade: parseInt(novoProduto.quantidade), precoUnitario: parseFloat(novoProduto.precoUnitario) }]);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/estoque', novoProduto, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNovoProduto({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
+      fetchProdutos();
+    } catch (error) {
+      console.error('Erro ao adicionar produto:', error);
+    }
+  };
+
+  const iniciarEdicao = (produto) => {
+    setEditandoProduto(produto);
+    setNovoProduto(produto);
+  };
+
+  const cancelarEdicao = () => {
+    setEditandoProduto(null);
     setNovoProduto({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
+  };
+
+  const salvarEdicao = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:5000/api/estoque/${editandoProduto.id}`, novoProduto, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEditandoProduto(null);
+      setNovoProduto({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
+      fetchProdutos();
+    } catch (error) {
+      console.error('Erro ao editar produto:', error);
+    }
+  };
+
+  const deletarProduto = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/estoque/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchProdutos();
+    } catch (error) {
+      console.error('Erro ao deletar produto:', error);
+    }
   };
 
   const dadosGrafico = {
@@ -73,8 +130,8 @@ const EstoquePage = () => {
           <Col>
             <StyledCard>
               <Card.Body>
-                <Card.Title>Novo Produto</Card.Title>
-                <Form onSubmit={adicionarProduto}>
+                <Card.Title>{editandoProduto ? 'Editar Produto' : 'Novo Produto'}</Card.Title>
+                <Form onSubmit={editandoProduto ? salvarEdicao : adicionarProduto}>
                   <Row>
                     <Col md={3}>
                       <Form.Group>
@@ -131,9 +188,14 @@ const EstoquePage = () => {
                     </Col>
                   </Row>
                   <Button variant="primary" type="submit" className="mt-3">
-                    <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                    Adicionar Produto
+                    <FontAwesomeIcon icon={editandoProduto ? faEdit : faPlus} className="mr-2" />
+                    {editandoProduto ? 'Salvar Alterações' : 'Adicionar Produto'}
                   </Button>
+                  {editandoProduto && (
+                    <Button variant="secondary" onClick={cancelarEdicao} className="mt-3 ml-2">
+                      Cancelar Edição
+                    </Button>
+                  )}
                 </Form>
               </Card.Body>
             </StyledCard>
@@ -202,14 +264,14 @@ const EstoquePage = () => {
                   <tr key={produto.id}>
                     <td>{produto.nome}</td>
                     <td>{produto.quantidade}</td>
-                    <td>R$ {produto.precoUnitario.toFixed(2)}</td>
+                    <td>R$ {parseFloat(produto.precoUnitario).toFixed(2)}</td>
                     <td>R$ {(produto.quantidade * produto.precoUnitario).toFixed(2)}</td>
                     <td>{produto.categoria}</td>
                     <td>
-                      <Button variant="outline-primary" size="sm" className="mr-2">
+                      <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => iniciarEdicao(produto)}>
                         <FontAwesomeIcon icon={faEdit} />
                       </Button>
-                      <Button variant="outline-danger" size="sm">
+                      <Button variant="outline-danger" size="sm" onClick={() => deletarProduto(produto.id)}>
                         <FontAwesomeIcon icon={faTrash} />
                       </Button>
                     </td>

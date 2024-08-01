@@ -11,6 +11,7 @@ import styled from 'styled-components';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -77,65 +78,96 @@ const TimelineContent = styled.div`
   }
 `;
 
-const parcelamentosData = [
-  { id: 1, description: 'Notebook', totalAmount: 3000.00, remainingInstallments: 8, monthlyPayment: 375.00, startDate: '2023-05-15' },
-  { id: 2, description: 'Smartphone', totalAmount: 1200.00, remainingInstallments: 4, monthlyPayment: 300.00, startDate: '2023-07-01' },
-  { id: 3, description: 'Geladeira', totalAmount: 2500.00, remainingInstallments: 10, monthlyPayment: 250.00, startDate: '2023-08-10' },
-  { id: 4, description: 'TV', totalAmount: 1800.00, remainingInstallments: 6, monthlyPayment: 300.00, startDate: '2023-06-20' },
-];
-
-const chartData = {
-  labels: ['Notebook', 'Smartphone', 'Geladeira', 'TV'],
-  datasets: [
-    {
-      data: [3000, 1200, 2500, 1800],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.6)',
-        'rgba(54, 162, 235, 0.6)',
-        'rgba(255, 206, 86, 0.6)',
-        'rgba(75, 192, 192, 0.6)',
-      ],
-    }
-  ]
-};
-
 const ParcelamentosPage = () => {
-  const [newParcelamento, setNewParcelamento] = useState({
-    description: '',
-    totalAmount: '',
-    installments: '',
-    startDate: ''
+  const [parcelamentos, setParcelamentos] = useState([]);
+  const [novoParcelamento, setNovoParcelamento] = useState({
+    descricao: '',
+    valor_total: '',
+    numero_parcelas: '',
+    data_inicio: ''
   });
   const [showSimulationModal, setShowSimulationModal] = useState(false);
   const [simulationResult, setSimulationResult] = useState(null);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewParcelamento(prev => ({ ...prev, [name]: value }));
+  useEffect(() => {
+    fetchParcelamentos();
+  }, []);
+
+  const fetchParcelamentos = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/parcelamentos', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setParcelamentos(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar parcelamentos:', error);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNovoParcelamento(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Novo parcelamento:', newParcelamento);
-    setNewParcelamento({ description: '', totalAmount: '', installments: '', startDate: '' });
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/parcelamentos', novoParcelamento, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNovoParcelamento({ descricao: '', valor_total: '', numero_parcelas: '', data_inicio: '' });
+      fetchParcelamentos();
+    } catch (error) {
+      console.error('Erro ao adicionar parcelamento:', error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/parcelamentos/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchParcelamentos();
+    } catch (error) {
+      console.error('Erro ao deletar parcelamento:', error);
+    }
   };
 
   const handleSimulation = (parcelamento) => {
-    const totalAmount = parcelamento.totalAmount;
-    const remainingInstallments = parcelamento.remainingInstallments;
-    const discountRate = 0.1;
+    const valorTotal = parseFloat(parcelamento.valor_total);
+    const numeroParcelas = parseInt(parcelamento.numero_parcelas);
+    const taxaDesconto = 0.1; // 10% de desconto
 
-    const discountedAmount = totalAmount * (1 - discountRate);
-    const savings = totalAmount - discountedAmount;
+    const valorParcela = valorTotal / numeroParcelas;
+    const valorTotalComDesconto = valorTotal * (1 - taxaDesconto);
+    const economia = valorTotal - valorTotalComDesconto;
 
     setSimulationResult({
-      originalAmount: totalAmount,
-      discountedAmount: discountedAmount,
-      savings: savings,
-      remainingInstallments: remainingInstallments
+      valorParcela: valorParcela,
+      valorTotalComDesconto: valorTotalComDesconto,
+      economia: economia,
+      numeroParcelas: numeroParcelas
     });
 
     setShowSimulationModal(true);
+  };
+
+  const chartData = {
+    labels: parcelamentos.map(p => p.descricao),
+    datasets: [
+      {
+        data: parcelamentos.map(p => p.valor_total),
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(255, 206, 86, 0.6)',
+          'rgba(75, 192, 192, 0.6)',
+        ],
+      }
+    ]
   };
 
   return (
@@ -159,10 +191,10 @@ const ParcelamentosPage = () => {
                         <Form.Label>Descrição</Form.Label>
                         <Form.Control 
                           type="text" 
-                          name="description" 
-                          value={newParcelamento.description} 
-                          onChange={handleInputChange} 
-                          required 
+                          name="descricao"
+                          value={novoParcelamento.descricao}
+                          onChange={handleInputChange}
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -171,10 +203,10 @@ const ParcelamentosPage = () => {
                         <Form.Label>Valor Total</Form.Label>
                         <Form.Control 
                           type="number" 
-                          name="totalAmount" 
-                          value={newParcelamento.totalAmount} 
-                          onChange={handleInputChange} 
-                          required 
+                          name="valor_total"
+                          value={novoParcelamento.valor_total}
+                          onChange={handleInputChange}
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -183,10 +215,10 @@ const ParcelamentosPage = () => {
                         <Form.Label>Número de Parcelas</Form.Label>
                         <Form.Control 
                           type="number" 
-                          name="installments" 
-                          value={newParcelamento.installments} 
-                          onChange={handleInputChange} 
-                          required 
+                          name="numero_parcelas"
+                          value={novoParcelamento.numero_parcelas}
+                          onChange={handleInputChange}
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -195,10 +227,10 @@ const ParcelamentosPage = () => {
                         <Form.Label>Data de Início</Form.Label>
                         <Form.Control 
                           type="date" 
-                          name="startDate" 
-                          value={newParcelamento.startDate} 
-                          onChange={handleInputChange} 
-                          required 
+                          name="data_inicio"
+                          value={novoParcelamento.data_inicio}
+                          onChange={handleInputChange}
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -220,7 +252,7 @@ const ParcelamentosPage = () => {
                 <Card.Title>Distribuição de Parcelamentos</Card.Title>
                 <ChartContainer>
                   <Pie data={chartData} options={{ responsive: true, maintainAspectRatio: false }} />
-                </ChartContainer>
+                  </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
@@ -238,9 +270,9 @@ const ParcelamentosPage = () => {
                   </thead>
                   <tbody>
                     <tr>
-                      <td>R$ {parcelamentosData.reduce((acc, curr) => acc + curr.totalAmount, 0).toFixed(2)}</td>
-                      <td>{parcelamentosData.reduce((acc, curr) => acc + curr.remainingInstallments, 0)}</td>
-                      <td>R$ {parcelamentosData.reduce((acc, curr) => acc + curr.monthlyPayment, 0).toFixed(2)}</td>
+                      <td>R$ {parcelamentos.reduce((acc, curr) => acc + parseFloat(curr.valor_total), 0).toFixed(2)}</td>
+                      <td>{parcelamentos.reduce((acc, curr) => acc + parseInt(curr.numero_parcelas), 0)}</td>
+                      <td>R$ {parcelamentos.reduce((acc, curr) => acc + (parseFloat(curr.valor_total) / parseInt(curr.numero_parcelas)), 0).toFixed(2)}</td>
                     </tr>
                   </tbody>
                 </Table>
@@ -255,12 +287,12 @@ const ParcelamentosPage = () => {
               <Card.Body>
                 <Card.Title>Timeline de Pagamentos Futuros</Card.Title>
                 <TimelineContainer>
-                  {parcelamentosData.map((parcelamento, index) => (
+                  {parcelamentos.map((parcelamento, index) => (
                     <TimelineItem key={parcelamento.id}>
                       <TimelineContent>
-                        <h6>{parcelamento.description}</h6>
-                        <p>Próximo pagamento: R$ {parcelamento.monthlyPayment.toFixed(2)}</p>
-                        <p>Data: {new Date(parcelamento.startDate).toLocaleDateString()}</p>
+                        <h6>{parcelamento.descricao}</h6>
+                        <p>Próximo pagamento: R$ {(parseFloat(parcelamento.valor_total) / parseInt(parcelamento.numero_parcelas)).toFixed(2)}</p>
+                        <p>Data: {new Date(parcelamento.data_inicio).toLocaleDateString()}</p>
                       </TimelineContent>
                     </TimelineItem>
                   ))}
@@ -287,18 +319,18 @@ const ParcelamentosPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                  {parcelamentosData.map((parcelamento) => (
+                  {parcelamentos.map((parcelamento) => (
                       <tr key={parcelamento.id}>
-                        <td>{parcelamento.description}</td>
-                        <td>R$ {parcelamento.totalAmount.toFixed(2)}</td>
-                        <td>{parcelamento.remainingInstallments}</td>
-                        <td>R$ {parcelamento.monthlyPayment.toFixed(2)}</td>
-                        <td>{parcelamento.startDate}</td>
+                        <td>{parcelamento.descricao}</td>
+                        <td>R$ {parseFloat(parcelamento.valor_total).toFixed(2)}</td>
+                        <td>{parcelamento.numero_parcelas}</td>
+                        <td>R$ {(parseFloat(parcelamento.valor_total) / parseInt(parcelamento.numero_parcelas)).toFixed(2)}</td>
+                        <td>{parcelamento.data_inicio}</td>
                         <td>
                           <Button variant="outline-primary" size="sm" className="mr-2">
                             <FontAwesomeIcon icon={faEdit} />
                           </Button>
-                          <Button variant="outline-danger" size="sm" className="mr-2">
+                          <Button variant="outline-danger" size="sm" className="mr-2" onClick={() => handleDelete(parcelamento.id)}>
                             <FontAwesomeIcon icon={faTrash} />
                           </Button>
                           <Button variant="outline-info" size="sm" onClick={() => handleSimulation(parcelamento)}>
@@ -321,10 +353,10 @@ const ParcelamentosPage = () => {
           <Modal.Body>
             {simulationResult && (
               <>
-                <p>Valor original: R$ {simulationResult.originalAmount.toFixed(2)}</p>
-                <p>Valor com desconto: R$ {simulationResult.discountedAmount.toFixed(2)}</p>
-                <p>Economia: R$ {simulationResult.savings.toFixed(2)}</p>
-                <p>Parcelas antecipadas: {simulationResult.remainingInstallments}</p>
+                <p>Valor da parcela: R$ {simulationResult.valorParcela.toFixed(2)}</p>
+                <p>Valor total com desconto: R$ {simulationResult.valorTotalComDesconto.toFixed(2)}</p>
+                <p>Economia: R$ {simulationResult.economia.toFixed(2)}</p>
+                <p>Parcelas antecipadas: {simulationResult.numeroParcelas}</p>
               </>
             )}
           </Modal.Body>
@@ -343,3 +375,4 @@ const ParcelamentosPage = () => {
 };
 
 export default ParcelamentosPage;
+

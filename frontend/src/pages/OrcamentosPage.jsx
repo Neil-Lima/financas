@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Table, Alert } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -11,6 +11,7 @@ import styled from 'styled-components';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -31,47 +32,98 @@ const ChartContainer = styled.div`
 `;
 
 const OrcamentosPage = () => {
-  const [newBudget, setNewBudget] = useState({
-    category: '',
-    planned: '',
+  const [orcamentos, setOrcamentos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [newOrcamento, setNewOrcamento] = useState({
+    categoria_id: '',
+    valor_planejado: '',
+    mes: new Date().getMonth() + 1,
+    ano: new Date().getFullYear()
   });
-  const [budgetData, setBudgetData] = useState([
-    { id: 1, category: 'Alimentação', planned: 800, spent: 650, remaining: 150 },
-    { id: 2, category: 'Moradia', planned: 1200, spent: 1200, remaining: 0 },
-    { id: 3, category: 'Transporte', planned: 300, spent: 280, remaining: 20 },
-    { id: 4, category: 'Lazer', planned: 200, spent: 150, remaining: 50 },
-    { id: 5, category: 'Saúde', planned: 400, spent: 100, remaining: 300 },
-  ]);
   const [alerts, setAlerts] = useState([]);
+
+  useEffect(() => {
+    fetchOrcamentos();
+    fetchCategorias();
+  }, []);
+
+  const fetchOrcamentos = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5000/api/orcamentos?mes=${newOrcamento.mes}&ano=${newOrcamento.ano}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrcamentos(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar orçamentos:', error);
+    }
+  };
+
+  const fetchCategorias = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/categorias', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCategorias(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewBudget(prev => ({ ...prev, [name]: value }));
+    setNewOrcamento(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Novo orçamento:', newBudget);
-    setNewBudget({ category: '', planned: '' });
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/orcamentos', newOrcamento, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNewOrcamento({
+        categoria_id: '',
+        valor_planejado: '',
+        mes: new Date().getMonth() + 1,
+        ano: new Date().getFullYear()
+      });
+      fetchOrcamentos();
+    } catch (error) {
+      console.error('Erro ao adicionar orçamento:', error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/orcamentos/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchOrcamentos();
+    } catch (error) {
+      console.error('Erro ao deletar orçamento:', error);
+    }
   };
 
   useEffect(() => {
-    const newAlerts = budgetData.filter(budget => budget.spent > budget.planned)
-      .map(budget => `${budget.category}: Ultrapassou o limite em R$ ${(budget.spent - budget.planned).toFixed(2)}`);
+    const newAlerts = orcamentos.filter(orcamento => orcamento.valor_atual > orcamento.valor_planejado)
+      .map(orcamento => `${categorias.find(cat => cat.id === orcamento.categoria_id)?.nome}: Ultrapassou o limite em R$ ${(orcamento.valor_atual - orcamento.valor_planejado).toFixed(2)}`);
     setAlerts(newAlerts);
-  }, [budgetData]);
+  }, [orcamentos, categorias]);
 
   const chartData = {
-    labels: budgetData.map(item => item.category),
+    labels: orcamentos.map(orcamento => categorias.find(cat => cat.id === orcamento.categoria_id)?.nome),
     datasets: [
       {
         label: 'Planejado',
-        data: budgetData.map(item => item.planned),
+        data: orcamentos.map(orcamento => orcamento.valor_planejado),
         backgroundColor: 'rgba(75, 192, 192, 0.6)',
       },
       {
-        label: 'Gasto',
-        data: budgetData.map(item => item.spent),
+        label: 'Atual',
+        data: orcamentos.map(orcamento => orcamento.valor_atual),
         backgroundColor: 'rgba(255, 99, 132, 0.6)',
       }
     ]
@@ -108,33 +160,56 @@ const OrcamentosPage = () => {
                 <Card.Title>Novo Orçamento</Card.Title>
                 <Form onSubmit={handleSubmit}>
                   <Row>
-                    <Col md={6}>
+                    <Col md={3}>
                       <Form.Group>
                         <Form.Label>Categoria</Form.Label>
                         <Form.Control 
                           as="select" 
-                          name="category" 
-                          value={newBudget.category} 
+                          name="categoria_id" 
+                          value={newOrcamento.categoria_id} 
                           onChange={handleInputChange} 
                           required
                         >
                           <option value="">Selecione uma categoria</option>
-                          <option value="Alimentação">Alimentação</option>
-                          <option value="Moradia">Moradia</option>
-                          <option value="Transporte">Transporte</option>
-                          <option value="Lazer">Lazer</option>
-                          <option value="Saúde">Saúde</option>
-                          <option value="Educação">Educação</option>
+                          {categorias.map(categoria => (
+                            <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+                          ))}
                         </Form.Control>
                       </Form.Group>
                     </Col>
-                    <Col md={6}>
+                    <Col md={3}>
                       <Form.Group>
                         <Form.Label>Valor Planejado</Form.Label>
                         <Form.Control 
                           type="number" 
-                          name="planned" 
-                          value={newBudget.planned} 
+                          name="valor_planejado" 
+                          value={newOrcamento.valor_planejado} 
+                          onChange={handleInputChange} 
+                          required 
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Mês</Form.Label>
+                        <Form.Control 
+                          type="number" 
+                          name="mes" 
+                          value={newOrcamento.mes} 
+                          onChange={handleInputChange} 
+                          min="1" 
+                          max="12" 
+                          required 
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Ano</Form.Label>
+                        <Form.Control 
+                          type="number" 
+                          name="ano" 
+                          value={newOrcamento.ano} 
                           onChange={handleInputChange} 
                           required 
                         />
@@ -173,7 +248,7 @@ const OrcamentosPage = () => {
                         },
                         title: {
                           display: true,
-                          text: 'Orçamento Planejado vs Gasto'
+                          text: 'Orçamento Planejado vs Atual'
                         }
                       }
                     }} 
@@ -194,33 +269,33 @@ const OrcamentosPage = () => {
                     <tr>
                       <th>Categoria</th>
                       <th>Planejado</th>
-                      <th>Gasto</th>
+                      <th>Atual</th>
                       <th>Restante</th>
                       <th>Progresso</th>
                       <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {budgetData.map((budget) => (
-                      <tr key={budget.id}>
-                        <td>{budget.category}</td>
-                        <td>R$ {budget.planned.toFixed(2)}</td>
-                        <td>R$ {budget.spent.toFixed(2)}</td>
-                        <td>R$ {budget.remaining.toFixed(2)}</td>
+                    {orcamentos.map((orcamento) => (
+                      <tr key={orcamento.id}>
+                        <td>{categorias.find(cat => cat.id === orcamento.categoria_id)?.nome}</td>
+                        <td>R$ {orcamento.valor_planejado.toFixed(2)}</td>
+                        <td>R$ {orcamento.valor_atual.toFixed(2)}</td>
+                        <td>R$ {(orcamento.valor_planejado - orcamento.valor_atual).toFixed(2)}</td>
                         <td>
                           <div className="progress">
                             <div 
                               className="progress-bar" 
                               role="progressbar" 
                               style={{
-                                width: `${(budget.spent / budget.planned) * 100}%`,
-                                backgroundColor: budget.spent > budget.planned ? 'red' : 'green'
+                                width: `${(orcamento.valor_atual / orcamento.valor_planejado) * 100}%`,
+                                backgroundColor: orcamento.valor_atual > orcamento.valor_planejado ? 'red' : 'green'
                               }}
-                              aria-valuenow={(budget.spent / budget.planned) * 100}
+                              aria-valuenow={(orcamento.valor_atual / orcamento.valor_planejado) * 100}
                               aria-valuemin="0" 
                               aria-valuemax="100"
                             >
-                              {((budget.spent / budget.planned) * 100).toFixed(0)}%
+                              {((orcamento.valor_atual / orcamento.valor_planejado) * 100).toFixed(0)}%
                             </div>
                           </div>
                         </td>
@@ -228,7 +303,7 @@ const OrcamentosPage = () => {
                           <Button variant="outline-primary" size="sm" className="mr-2">
                             <FontAwesomeIcon icon={faEdit} />
                           </Button>
-                          <Button variant="outline-danger" size="sm">
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(orcamento.id)}>
                             <FontAwesomeIcon icon={faTrash} />
                           </Button>
                         </td>

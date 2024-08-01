@@ -1,0 +1,42 @@
+backend/
+├── config/
+│   └── database.js
+├── middleware
+    ├── authMiddleware.js
+├── routes/
+│   ├── usuariosRoutes.js
+│   ├── contasRoutes.js
+│   ├── transacoesRoutes.js
+│   ├── categoriasRoutes.js
+│   ├── orcamentosRoutes.js
+│   ├── metasRoutes.js
+│   ├── financiamentosRoutes.js
+│   ├── parcelamentosRoutes.js
+│   ├── investimentosRoutes.js
+│   ├── estoqueRoutes.js
+│   └── configuracoesRoutes.js
+├── controllers/
+│   ├── usuariosController.js
+│   ├── contasController.js
+│   ├── transacoesController.js
+│   ├── categoriasController.js
+│   ├── orcamentosController.js
+│   ├── metasController.js
+│   ├── financiamentosController.js
+│   ├── parcelamentosController.js
+│   ├── investimentosController.js
+│   ├── estoqueController.js
+│   └── configuracoesController.js
+├── models/
+│   ├── Usuario.js
+│   ├── Conta.js
+│   ├── Transacao.js
+│   ├── Categoria.js
+│   ├── Orcamento.js
+│   ├── Meta.js
+│   ├── Financiamento.js
+│   ├── Parcelamento.js
+│   ├── Investimento.js
+│   ├── Estoque.js
+│   └── Configuracao.js
+└── index.js

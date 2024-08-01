@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { Pie, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
+import axios from 'axios';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -26,28 +27,59 @@ const ChartContainer = styled.div`
 `;
 
 const ContasPage = () => {
-  const [contas, setContas] = useState([
-    { id: 1, nome: 'Conta Corrente', saldo: 5000, categoria: 'Bancária' },
-    { id: 2, nome: 'Poupança', saldo: 10000, categoria: 'Investimento' },
-    { id: 3, nome: 'Carteira', saldo: 500, categoria: 'Dinheiro Físico' },
-    { id: 4, nome: 'Investimentos', saldo: 20000, categoria: 'Investimento' },
-  ]);
-  const [novaConta, setNovaConta] = useState({ nome: '', saldo: '', categoria: '' });
+  const [contas, setContas] = useState([]);
+  const [novaConta, setNovaConta] = useState({ nome: '', saldo: '', tipo: '' });
+
+  useEffect(() => {
+    fetchContas();
+  }, []);
+
+  const fetchContas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/contas', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setContas(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar contas:', error);
+    }
+  };
 
   const handleNovaContaChange = (e) => {
     setNovaConta({ ...novaConta, [e.target.name]: e.target.value });
   };
 
-  const adicionarConta = (e) => {
+  const adicionarConta = async (e) => {
     e.preventDefault();
-    setContas([...contas, { ...novaConta, id: contas.length + 1, saldo: parseFloat(novaConta.saldo) }]);
-    setNovaConta({ nome: '', saldo: '', categoria: '' });
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/contas', novaConta, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNovaConta({ nome: '', saldo: '', tipo: '' });
+      fetchContas();
+    } catch (error) {
+      console.error('Erro ao adicionar conta:', error);
+    }
+  };
+
+  const deletarConta = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/contas/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchContas();
+    } catch (error) {
+      console.error('Erro ao deletar conta:', error);
+    }
   };
 
   const despesasPorCategoria = {
-    labels: ['Bancária', 'Investimento', 'Dinheiro Físico'],
+    labels: contas.map(conta => conta.tipo),
     datasets: [{
-      data: [5000, 30000, 500],
+      data: contas.map(conta => conta.saldo),
       backgroundColor: [
         'rgba(255, 99, 132, 0.6)',
         'rgba(54, 162, 235, 0.6)',
@@ -109,18 +141,18 @@ const ContasPage = () => {
                     </Col>
                     <Col md={4}>
                       <Form.Group>
-                        <Form.Label>Categoria</Form.Label>
+                        <Form.Label>Tipo</Form.Label>
                         <Form.Control 
                           as="select"
-                          name="categoria"
-                          value={novaConta.categoria}
+                          name="tipo"
+                          value={novaConta.tipo}
                           onChange={handleNovaContaChange}
                           required
                         >
-                          <option value="">Selecione uma categoria</option>
-                          <option value="Bancária">Bancária</option>
+                          <option value="">Selecione um tipo</option>
+                          <option value="Corrente">Corrente</option>
+                          <option value="Poupança">Poupança</option>
                           <option value="Investimento">Investimento</option>
-                          <option value="Dinheiro Físico">Dinheiro Físico</option>
                         </Form.Control>
                       </Form.Group>
                     </Col>
@@ -176,7 +208,7 @@ const ContasPage = () => {
               <thead>
                 <tr>
                   <th>Nome</th>
-                  <th>Categoria</th>
+                  <th>Tipo</th>
                   <th>Saldo</th>
                   <th>Ações</th>
                 </tr>
@@ -185,13 +217,13 @@ const ContasPage = () => {
                 {contas.map((conta) => (
                   <tr key={conta.id}>
                     <td>{conta.nome}</td>
-                    <td>{conta.categoria}</td>
-                    <td>R$ {conta.saldo.toFixed(2)}</td>
+                    <td>{conta.tipo}</td>
+                    <td>R$ {parseFloat(conta.saldo).toFixed(2)}</td>
                     <td>
                       <Button variant="outline-primary" size="sm" className="mr-2">
                         <FontAwesomeIcon icon={faEdit} />
                       </Button>
-                      <Button variant="outline-danger" size="sm">
+                      <Button variant="outline-danger" size="sm" onClick={() => deletarConta(conta.id)}>
                         <FontAwesomeIcon icon={faTrash} />
                       </Button>
                     </td>

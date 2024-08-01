@@ -11,14 +11,21 @@ import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+const StyledContainer = styled(Container)`
+  padding: 20px;
+`;
 
 const StyledCard = styled(Card)`
   border: none;
   border-radius: 8px;
   box-shadow: 0 0 15px rgba(0,0,0,.05);
   margin-bottom: 20px;
+  background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
 `;
 
 const ChartContainer = styled.div`
@@ -26,7 +33,12 @@ const ChartContainer = styled.div`
   width: 100%;
 `;
 
+const StyledTable = styled(Table)`
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+`;
+
 const EstoquePage = () => {
+  const { isDarkMode } = useTheme();
   const [produtos, setProdutos] = useState([]);
   const [novoProduto, setNovoProduto] = useState({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
   const [editandoProduto, setEditandoProduto] = useState(null);
@@ -117,9 +129,39 @@ const EstoquePage = () => {
     ]
   };
 
+  const opcoesGrafico = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      x: {
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        labels: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      title: {
+        display: true,
+        text: 'Visão Geral do Estoque',
+        color: isDarkMode ? '#ffffff' : '#000000'
+      }
+    }
+  };
+
   return (
     <Layout>
-      <Container>
+      <StyledContainer>
         <Row className="mb-4">
           <Col>
             <h2>Controle de Estoque</h2>
@@ -128,7 +170,7 @@ const EstoquePage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>{editandoProduto ? 'Editar Produto' : 'Novo Produto'}</Card.Title>
                 <Form onSubmit={editandoProduto ? salvarEdicao : adicionarProduto}>
@@ -204,51 +246,21 @@ const EstoquePage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Visão Geral do Estoque</Card.Title>
                 <ChartContainer>
-                  <Bar 
-                    data={dadosGrafico} 
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          title: {
-                            display: true,
-                            text: 'Quantidade / Valor (R$)'
-                          }
-                        },
-                        x: {
-                          title: {
-                            display: true,
-                            text: 'Produtos'
-                          }
-                        }
-                      },
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        title: {
-                          display: true,
-                          text: 'Quantidade e Valor Total por Produto'
-                        }
-                      }
-                    }}
-                  />
+                  <Bar data={dadosGrafico} options={opcoesGrafico} />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
         </Row>
 
-        <StyledCard>
+        <StyledCard isDarkMode={isDarkMode}>
           <Card.Body>
             <Card.Title>Lista de Produtos</Card.Title>
-            <Table striped bordered hover>
+            <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'} isDarkMode={isDarkMode}>
               <thead>
                 <tr>
                   <th>Nome</th>
@@ -278,10 +290,10 @@ const EstoquePage = () => {
                   </tr>
                 ))}
               </tbody>
-            </Table>
+            </StyledTable>
           </Card.Body>
         </StyledCard>
-      </Container>
+      </StyledContainer>
     </Layout>
   );
 };

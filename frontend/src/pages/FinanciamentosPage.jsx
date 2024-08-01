@@ -1,70 +1,52 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Nav, Navbar, Button, Form, Table, Collapse, Modal } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faHome, 
-  faWallet, 
-  faChartPie, 
-  faUser, 
-  faCog, 
-  faHistory, 
-  faMoon, 
-  faBell, 
-  faCommentDots, 
-  faCalendarAlt,
-  faFileInvoiceDollar,
-  faCreditCard,
-  faHandHoldingUsd,
-  faExclamationTriangle,
-  faPiggyBank,
-  faMoneyBillWave,
-  faChartLine,
-  faBalanceScale,
-  faAngleDown,
-  faAngleUp,
   faPlus,
   faEdit,
-  faTrash,
-  faFileImport
+  faTrash
 } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
-import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import Layout from '../layout/Layout';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 
-ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+
+const StyledContainer = styled(Container)`
+  padding: 20px;
+`;
 
 const StyledCard = styled(Card)`
   border: none;
-  height: 100%;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  }
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0,0,0,.05);
+  margin-bottom: 20px;
+  background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
 `;
 
 const ChartContainer = styled.div`
-  height: 300px;
+  height: 400px;
   width: 100%;
 `;
 
+const StyledTable = styled(Table)`
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+`;
+
 const FinanciamentosPage = () => {
+  const { isDarkMode } = useTheme();
   const [financiamentos, setFinanciamentos] = useState([]);
-  const [openDropdown, setOpenDropdown] = useState('');
-  const chartRef = useRef(null);
-  const [newFinanciamento, setNewFinanciamento] = useState({
-    descricao: '',
-    valor_total: '',
-    parcelas_totais: '',
-    taxa_juros: '',
-    data_inicio: ''
+  const [novoFinanciamento, setNovoFinanciamento] = useState({ 
+    descricao: '', 
+    valorTotal: '', 
+    taxaJuros: '', 
+    prazo: '', 
+    dataPrimeiraParcela: '' 
   });
-  const [showSimulationModal, setShowSimulationModal] = useState(false);
-  const [simulationResult, setSimulationResult] = useState(null);
 
   useEffect(() => {
     fetchFinanciamentos();
@@ -82,28 +64,23 @@ const FinanciamentosPage = () => {
     }
   };
 
-  const toggleDropdown = (name) => {
-    setOpenDropdown(openDropdown === name ? '' : name);
+  const handleNovoFinanciamentoChange = (e) => {
+    setNovoFinanciamento({ ...novoFinanciamento, [e.target.name]: e.target.value });
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewFinanciamento(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
+  const adicionarFinanciamento = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/financiamentos', newFinanciamento, {
+      await axios.post('http://localhost:5000/api/financiamentos', novoFinanciamento, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNewFinanciamento({
-        descricao: '',
-        valor_total: '',
-        parcelas_totais: '',
-        taxa_juros: '',
-        data_inicio: ''
+      setNovoFinanciamento({ 
+        descricao: '', 
+        valorTotal: '', 
+        taxaJuros: '', 
+        prazo: '', 
+        dataPrimeiraParcela: '' 
       });
       fetchFinanciamentos();
     } catch (error) {
@@ -111,7 +88,7 @@ const FinanciamentosPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const deletarFinanciamento = async (id) => {
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`http://localhost:5000/api/financiamentos/${id}`, {
@@ -123,45 +100,51 @@ const FinanciamentosPage = () => {
     }
   };
 
-  const handleSimulation = (financiamento) => {
-    const totalAmount = financiamento.valor_total;
-    const remainingInstallments = financiamento.parcelas_totais;
-    const interestRate = financiamento.taxa_juros / 100; // Convertendo para decimal
-
-    const monthlyInterestRate = interestRate / 12;
-    const monthlyPayment = (totalAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, remainingInstallments)) / (Math.pow(1 + monthlyInterestRate, remainingInstallments) - 1);
-
-    const totalInterest = (monthlyPayment * remainingInstallments) - totalAmount;
-
-    setSimulationResult({
-      monthlyPayment: monthlyPayment,
-      totalInterest: totalInterest,
-      totalAmount: totalAmount,
-      remainingInstallments: remainingInstallments
-    });
-
-    setShowSimulationModal(true);
-  };
-
-  const chartData = {
+  const dadosGrafico = {
     labels: financiamentos.map(f => f.descricao),
     datasets: [
       {
-        data: financiamentos.map(f => f.valor_total),
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.6)',
-          'rgba(54, 162, 235, 0.6)',
-          'rgba(255, 206, 86, 0.6)',
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(153, 102, 255, 0.6)',
-        ],
+        label: 'Valor Total',
+        data: financiamentos.map(f => f.valorTotal),
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1
       }
     ]
   };
 
+  const opcoesGrafico = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      x: {
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        labels: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      title: {
+        display: true,
+        text: 'Visão Geral dos Financiamentos',
+        color: isDarkMode ? '#ffffff' : '#000000'
+      }
+    }
+  };
+
   return (
     <Layout>
-      <Container fluid>
+      <StyledContainer>
         <Row className="mb-4">
           <Col>
             <h2>Financiamentos</h2>
@@ -170,204 +153,136 @@ const FinanciamentosPage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Novo Financiamento</Card.Title>
-                <Form onSubmit={handleSubmit}>
+                <Form onSubmit={adicionarFinanciamento}>
                   <Row>
-                    <Col md={3}>
+                    <Col md={6}>
                       <Form.Group>
                         <Form.Label>Descrição</Form.Label>
                         <Form.Control 
                           type="text" 
                           name="descricao"
-                          value={newFinanciamento.descricao}
-                          onChange={handleInputChange}
+                          value={novoFinanciamento.descricao}
+                          onChange={handleNovoFinanciamentoChange}
                           required
                         />
                       </Form.Group>
                     </Col>
-                    <Col md={3}>
+                    <Col md={6}>
                       <Form.Group>
                         <Form.Label>Valor Total</Form.Label>
                         <Form.Control 
                           type="number" 
-                          name="valor_total"
-                          value={newFinanciamento.valor_total}
-                          onChange={handleInputChange}
+                          name="valorTotal"
+                          value={novoFinanciamento.valorTotal}
+                          onChange={handleNovoFinanciamentoChange}
                           required
                         />
                       </Form.Group>
                     </Col>
-                    <Col md={2}>
-                      <Form.Group>
-                        <Form.Label>Parcelas Totais</Form.Label>
-                        <Form.Control 
-                          type="number" 
-                          name="parcelas_totais"
-                          value={newFinanciamento.parcelas_totais}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={2}>
+                  </Row>
+                  <Row>
+                    <Col md={4}>
                       <Form.Group>
                         <Form.Label>Taxa de Juros (%)</Form.Label>
                         <Form.Control 
                           type="number" 
-                          name="taxa_juros"
-                          value={newFinanciamento.taxa_juros}
-                          onChange={handleInputChange}
+                          name="taxaJuros"
+                          value={novoFinanciamento.taxaJuros}
+                          onChange={handleNovoFinanciamentoChange}
                           required
                         />
                       </Form.Group>
                     </Col>
-                    <Col md={2}>
+                    <Col md={4}>
                       <Form.Group>
-                        <Form.Label>Data de Início</Form.Label>
+                        <Form.Label>Prazo (meses)</Form.Label>
+                        <Form.Control 
+                          type="number" 
+                          name="prazo"
+                          value={novoFinanciamento.prazo}
+                          onChange={handleNovoFinanciamentoChange}
+                          required
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label>Data da Primeira Parcela</Form.Label>
                         <Form.Control 
                           type="date" 
-                          name="data_inicio"
-                          value={newFinanciamento.data_inicio}
-                          onChange={handleInputChange}
+                          name="dataPrimeiraParcela"
+                          value={novoFinanciamento.dataPrimeiraParcela}
+                          onChange={handleNovoFinanciamentoChange}
                           required
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
-                    <Button variant="primary" type="submit" className="mt-3">
-                      Adicionar Financiamento
-                    </Button>
-                  </Form>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          </Row>
-  
-          <Row className="mb-4">
-            <Col md={6}>
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Distribuição de Financiamentos</Card.Title>
-                  <ChartContainer>
-                    <Bar 
-                      data={chartData} 
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            display: false,
-                          },
-                          title: {
-                            display: true,
-                            text: 'Valor Total por Financiamento'
-                          }
-                        }
-                      }} 
-                    />
-                  </ChartContainer>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-            <Col md={6}>
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Resumo de Financiamentos</Card.Title>
-                  <Table striped bordered hover>
-                    <thead>
-                      <tr>
-                        <th>Total Financiado</th>
-                        <th>Parcelas Restantes</th>
-                        <th>Valor Mensal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>R$ {financiamentos.reduce((acc, curr) => acc + curr.valor_total, 0).toFixed(2)}</td>
-                        <td>{financiamentos.reduce((acc, curr) => acc + curr.parcelas_totais, 0)}</td>
-                        <td>R$ {financiamentos.reduce((acc, curr) => {
-                          const monthlyInterestRate = (curr.taxa_juros / 100) / 12;
-                          const monthlyPayment = (curr.valor_total * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, curr.parcelas_totais)) / (Math.pow(1 + monthlyInterestRate, curr.parcelas_totais) - 1);
-                          return acc + monthlyPayment;
-                        }, 0).toFixed(2)}</td>
-                      </tr>
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          </Row>
-  
-          <Row>
-            <Col>
-              <StyledCard>
-                <Card.Body>
-                  <Card.Title>Lista de Financiamentos</Card.Title>
-                  <Table striped hover>
-                    <thead>
-                      <tr>
-                        <th>Descrição</th>
-                        <th>Valor Total</th>
-                        <th>Parcelas Restantes</th>
-                        <th>Valor Mensal</th>
-                        <th>Data de Início</th>
-                        <th>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    {financiamentos.map((financiamento) => (
-                        <tr key={financiamento.id}>
-                          <td>{financiamento.descricao}</td>
-                          <td>R$ {financiamento.valor_total.toFixed(2)}</td>
-                          <td>{financiamento.parcelas_totais}</td>
-                          <td>R$ {((financiamento.valor_total * (financiamento.taxa_juros / 100 / 12) * Math.pow(1 + financiamento.taxa_juros / 100 / 12, financiamento.parcelas_totais)) / (Math.pow(1 + financiamento.taxa_juros / 100 / 12, financiamento.parcelas_totais) - 1)).toFixed(2)}</td>
-                          <td>{financiamento.data_inicio}</td>
-                          <td>
-                            <Button variant="outline-primary" size="sm" className="mr-2">
-                              <FontAwesomeIcon icon={faEdit} />
-                            </Button>
-                            <Button variant="outline-danger" size="sm" className="mr-2" onClick={() => handleDelete(financiamento.id)}>
-                              <FontAwesomeIcon icon={faTrash} />
-                            </Button>
-                            <Button variant="outline-info" size="sm" onClick={() => handleSimulation(financiamento)}>
-                              Simular Antecipação
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </StyledCard>
-            </Col>
-          </Row>
-  
-          <Modal show={showSimulationModal} onHide={() => setShowSimulationModal(false)}>
-            <Modal.Header closeButton>
-              <Modal.Title>Simulação de Financiamento</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              {simulationResult && (
-                <>
-                  <p>Valor da parcela mensal: R$ {simulationResult.monthlyPayment.toFixed(2)}</p>
-                  <p>Total de juros a pagar: R$ {simulationResult.totalInterest.toFixed(2)}</p>
-                  <p>Valor total financiado: R$ {simulationResult.totalAmount.toFixed(2)}</p>
-                  <p>Número de parcelas restantes: {simulationResult.remainingInstallments}</p>
-                </>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowSimulationModal(false)}>
-                Fechar
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        </Container>
-      </Layout>
-    );
-  };
-  
-  export default FinanciamentosPage;
-  
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  <Button variant="primary" type="submit" className="mt-3">
+                    <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                    Adicionar Financiamento
+                  </Button>
+                </Form>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+        </Row>
+
+        <Row className="mb-4">
+          <Col>
+            <StyledCard isDarkMode={isDarkMode}>
+              <Card.Body>
+                <Card.Title>Visão Geral dos Financiamentos</Card.Title>
+                <ChartContainer>
+                  <Line data={dadosGrafico} options={opcoesGrafico} />
+                </ChartContainer>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+        </Row>
+
+        <StyledCard isDarkMode={isDarkMode}>
+          <Card.Body>
+            <Card.Title>Lista de Financiamentos</Card.Title>
+            <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'} isDarkMode={isDarkMode}>
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Valor Total</th>
+                  <th>Taxa de Juros</th>
+                  <th>Prazo</th>
+                  <th>Data da Primeira Parcela</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financiamentos.map((financiamento) => (
+                  <tr key={financiamento.id}>
+                    <td>{financiamento.descricao}</td>
+                    <td>R$ {parseFloat(financiamento.valorTotal).toFixed(2)}</td>
+                    <td>{financiamento.taxaJuros}%</td>
+                    <td>{financiamento.prazo} meses</td>
+                    <td>{new Date(financiamento.dataPrimeiraParcela).toLocaleDateString()}</td>
+                    <td>
+                      <Button variant="outline-primary" size="sm" className="mr-2">
+                        <FontAwesomeIcon icon={faEdit} />
+                      </Button>
+                      <Button variant="outline-danger" size="sm" onClick={() => deletarFinanciamento(financiamento.id)}>
+                        <FontAwesomeIcon icon={faTrash} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </StyledTable>
+          </Card.Body>
+        </StyledCard>
+      </StyledContainer>
+    </Layout>
+  );
+};
+
+export default FinanciamentosPage;

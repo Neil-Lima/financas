@@ -1,4 +1,3 @@
-// DespesaPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -13,13 +12,20 @@ import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, T
 import { Bar } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+const StyledContainer = styled(Container)`
+  padding: 20px;
+`;
 
 const StyledCard = styled(Card)`
   border: none;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
 
   &:hover {
     transform: translateY(-5px);
@@ -32,7 +38,12 @@ const ChartContainer = styled.div`
   width: 100%;
 `;
 
+const StyledTable = styled(Table)`
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+`;
+
 const DespesaPage = () => {
+  const { isDarkMode } = useTheme();
   const [despesas, setDespesas] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [novaDespesa, setNovaDespesa] = useState({
@@ -121,9 +132,39 @@ const DespesaPage = () => {
     ]
   };
 
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      x: {
+        ticks: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        labels: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      },
+      title: {
+        display: true,
+        text: 'Total de Despesas por Categoria',
+        color: isDarkMode ? '#ffffff' : '#000000'
+      }
+    }
+  };
+
   return (
     <Layout>
-      <Container fluid>
+      <StyledContainer fluid>
         <Row className="mb-4">
           <Col>
             <h2>Despesas</h2>
@@ -132,7 +173,7 @@ const DespesaPage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Nova Despesa</Card.Title>
                 <Form onSubmit={handleSubmit}>
@@ -203,31 +244,11 @@ const DespesaPage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Visão Geral de Despesas</Card.Title>
                 <ChartContainer>
-                  <Bar 
-                    data={chartData} 
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      scales: {
-                        y: {
-                          beginAtZero: true
-                        }
-                      },
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        title: {
-                          display: true,
-                          text: 'Total de Despesas por Categoria'
-                        }
-                      }
-                    }} 
-                  />
+                  <Bar data={chartData} options={chartOptions} />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
@@ -236,10 +257,10 @@ const DespesaPage = () => {
 
         <Row>
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Lista de Despesas</Card.Title>
-                <Table striped hover>
+                <StyledTable striped hover variant={isDarkMode ? 'dark' : 'light'} isDarkMode={isDarkMode}>
                   <thead>
                     <tr>
                       <th>Descrição</th>
@@ -267,12 +288,12 @@ const DespesaPage = () => {
                       </tr>
                     ))}
                   </tbody>
-                </Table>
+                </StyledTable>
               </Card.Body>
             </StyledCard>
           </Col>
         </Row>
-      </Container>
+      </StyledContainer>
     </Layout>
   );
 };

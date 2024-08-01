@@ -130,6 +130,8 @@ const SidebarComp = () => {
 
         <SidebarLink href="/perfil" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faUser} className="fa-icon" />Perfil</SidebarLink>
         <SidebarLink href="/historico" isDarkMode={isDarkMode}><FontAwesomeIcon icon={faHistory} className="fa-icon" />Histórico</SidebarLink>
+        <SidebarLink href="/estoque" isDarkMode={isDarkMode}><FontAwesomeIcon  className="fa-icon" />Estoque</SidebarLink>
+        <SidebarLink href="/metas" isDarkMode={isDarkMode}><FontAwesomeIcon  className="fa-icon" />Metas</SidebarLink>
       </Nav>
     </Sidebar>
   );

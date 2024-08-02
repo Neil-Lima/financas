@@ -83,6 +83,19 @@ const Usuario = {
         }
       });
     });
+  },
+
+  findAll: () => {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT id, nome, email, created_at FROM usuarios';
+      db.all(sql, [], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
   }
 };
 

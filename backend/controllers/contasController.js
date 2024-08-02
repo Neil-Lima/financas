@@ -48,6 +48,15 @@ const contasController = {
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
+  },
+
+  insertDefaultAccounts: async (req, res) => {
+    try {
+      await Conta.insertDefaultAccounts(req.user.id);
+      res.json({ message: 'Contas padrão inseridas com sucesso' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   }
 };
 

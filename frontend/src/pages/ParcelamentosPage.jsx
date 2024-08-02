@@ -1,17 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Table, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPlus,
   faEdit,
   faTrash,
-  faCalculator
+  faCalculator,
+  faEye,
+  faCheck,
+  faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -19,6 +23,8 @@ const StyledCard = styled(Card)`
   border: none;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
 
   &:hover {
     transform: translateY(-5px);
@@ -51,7 +57,7 @@ const TimelineItem = styled.div`
     position: absolute;
     width: 2px;
     height: 100%;
-    background-color: #e0e0e0;
+    background-color: ${props => props.isDarkMode ? '#4e4e4e' : '#e0e0e0'};
     left: 18px;
     top: 0;
   }
@@ -59,7 +65,7 @@ const TimelineItem = styled.div`
 
 const TimelineContent = styled.div`
   padding: 10px 20px;
-  background-color: #f8f9fa;
+  background-color: ${props => props.isDarkMode ? '#3c3c3c' : '#f8f9fa'};
   position: relative;
   border-radius: 6px;
   margin-left: 40px;
@@ -78,7 +84,31 @@ const TimelineContent = styled.div`
   }
 `;
 
+const StyledTable = styled(Table)`
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+`;
+
+const StyledModal = styled(Modal)`
+  .modal-content {
+    background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
+
+  .modal-header {
+    border-bottom: 1px solid ${props => props.isDarkMode ? '#444' : '#dee2e6'};
+  }
+
+  .modal-footer {
+    border-top: 1px solid ${props => props.isDarkMode ? '#444' : '#dee2e6'};
+  }
+
+  .close {
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
+`;
+
 const ParcelamentosPage = () => {
+  const { isDarkMode } = useTheme();
   const [parcelamentos, setParcelamentos] = useState([]);
   const [novoParcelamento, setNovoParcelamento] = useState({
     descricao: '',
@@ -88,6 +118,12 @@ const ParcelamentosPage = () => {
   });
   const [showSimulationModal, setShowSimulationModal] = useState(false);
   const [simulationResult, setSimulationResult] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editedParcelamento, setEditedParcelamento] = useState({});
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsParcelamento, setDetailsParcelamento] = useState(null);
 
   useEffect(() => {
     fetchParcelamentos();
@@ -124,16 +160,49 @@ const ParcelamentosPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteClick = (id) => {
+    setDeleteId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/parcelamentos/${id}`, {
+      await axios.delete(`http://localhost:5000/api/parcelamentos/${deleteId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchParcelamentos();
+      setShowDeleteModal(false);
     } catch (error) {
       console.error('Erro ao deletar parcelamento:', error);
     }
+  };
+
+  const handleEdit = (parcelamento) => {
+    setEditingId(parcelamento.id);
+    setEditedParcelamento(parcelamento);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditedParcelamento(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:5000/api/parcelamentos/${editingId}`, editedParcelamento, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEditingId(null);
+      fetchParcelamentos();
+    } catch (error) {
+      console.error('Erro ao editar parcelamento:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
   };
 
   const handleSimulation = (parcelamento) => {
@@ -155,6 +224,11 @@ const ParcelamentosPage = () => {
     setShowSimulationModal(true);
   };
 
+  const handleShowDetails = (parcelamento) => {
+    setDetailsParcelamento(parcelamento);
+    setShowDetailsModal(true);
+  };
+
   const chartData = {
     labels: parcelamentos.map(p => p.descricao),
     datasets: [
@@ -170,6 +244,19 @@ const ParcelamentosPage = () => {
     ]
   };
 
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }
+      }
+    }
+  };
+
   return (
     <Layout>
       <Container fluid>
@@ -181,7 +268,7 @@ const ParcelamentosPage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Novo Parcelamento</Card.Title>
                 <Form onSubmit={handleSubmit}>
@@ -247,20 +334,20 @@ const ParcelamentosPage = () => {
 
         <Row className="mb-4">
           <Col md={6}>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Distribuição de Parcelamentos</Card.Title>
                 <ChartContainer>
-                  <Pie data={chartData} options={{ responsive: true, maintainAspectRatio: false }} />
-                  </ChartContainer>
+                  <Pie data={chartData} options={chartOptions} />
+                </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
           <Col md={6}>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Resumo de Parcelamentos</Card.Title>
-                <Table striped bordered hover>
+                <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'}>
                   <thead>
                     <tr>
                       <th>Total Parcelado</th>
@@ -275,7 +362,7 @@ const ParcelamentosPage = () => {
                       <td>R$ {parcelamentos.reduce((acc, curr) => acc + (parseFloat(curr.valor_total) / parseInt(curr.numero_parcelas)), 0).toFixed(2)}</td>
                     </tr>
                   </tbody>
-                </Table>
+                </StyledTable>
               </Card.Body>
             </StyledCard>
           </Col>
@@ -283,13 +370,13 @@ const ParcelamentosPage = () => {
 
         <Row className="mb-4">
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Timeline de Pagamentos Futuros</Card.Title>
                 <TimelineContainer>
                   {parcelamentos.map((parcelamento, index) => (
-                    <TimelineItem key={parcelamento.id}>
-                      <TimelineContent>
+                    <TimelineItem key={parcelamento.id} isDarkMode={isDarkMode}>
+                      <TimelineContent isDarkMode={isDarkMode}>
                         <h6>{parcelamento.descricao}</h6>
                         <p>Próximo pagamento: R$ {(parseFloat(parcelamento.valor_total) / parseInt(parcelamento.numero_parcelas)).toFixed(2)}</p>
                         <p>Data: {new Date(parcelamento.data_inicio).toLocaleDateString()}</p>
@@ -304,10 +391,10 @@ const ParcelamentosPage = () => {
 
         <Row>
           <Col>
-            <StyledCard>
+            <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Lista de Parcelamentos</Card.Title>
-                <Table striped hover>
+                <StyledTable striped hover variant={isDarkMode ? 'dark' : 'light'}>
                   <thead>
                     <tr>
                       <th>Descrição</th>
@@ -316,37 +403,97 @@ const ParcelamentosPage = () => {
                       <th>Valor Mensal</th>
                       <th>Data de Início</th>
                       <th>Ações</th>
-                    </tr>
+                    </tr>                   
                   </thead>
                   <tbody>
                   {parcelamentos.map((parcelamento) => (
                       <tr key={parcelamento.id}>
-                        <td>{parcelamento.descricao}</td>
-                        <td>R$ {parseFloat(parcelamento.valor_total).toFixed(2)}</td>
-                        <td>{parcelamento.numero_parcelas}</td>
-                        <td>R$ {(parseFloat(parcelamento.valor_total) / parseInt(parcelamento.numero_parcelas)).toFixed(2)}</td>
-                        <td>{parcelamento.data_inicio}</td>
                         <td>
-                          <Button variant="outline-primary" size="sm" className="mr-2">
-                            <FontAwesomeIcon icon={faEdit} />
-                          </Button>
-                          <Button variant="outline-danger" size="sm" className="mr-2" onClick={() => handleDelete(parcelamento.id)}>
-                            <FontAwesomeIcon icon={faTrash} />
-                          </Button>
-                          <Button variant="outline-info" size="sm" onClick={() => handleSimulation(parcelamento)}>
-                            <FontAwesomeIcon icon={faCalculator} /> Simular
-                          </Button>
+                          {editingId === parcelamento.id ? (
+                            <Form.Control
+                              type="text"
+                              name="descricao"
+                              value={editedParcelamento.descricao}
+                              onChange={handleEditChange}
+                            />
+                          ) : (
+                            parcelamento.descricao
+                          )}
+                        </td>
+                        <td>
+                          {editingId === parcelamento.id ? (
+                            <Form.Control
+                              type="number"
+                              name="valor_total"
+                              value={editedParcelamento.valor_total}
+                              onChange={handleEditChange}
+                            />
+                          ) : (
+                            `R$ ${parseFloat(parcelamento.valor_total).toFixed(2)}`
+                          )}
+                        </td>
+                        <td>
+                          {editingId === parcelamento.id ? (
+                            <Form.Control
+                              type="number"
+                              name="numero_parcelas"
+                              value={editedParcelamento.numero_parcelas}
+                              onChange={handleEditChange}
+                            />
+                          ) : (
+                            parcelamento.numero_parcelas
+                          )}
+                        </td>
+                        <td>R$ {(parseFloat(parcelamento.valor_total) / parseInt(parcelamento.numero_parcelas)).toFixed(2)}</td>
+                        <td>
+                          {editingId === parcelamento.id ? (
+                            <Form.Control
+                              type="date"
+                              name="data_inicio"
+                              value={editedParcelamento.data_inicio}
+                              onChange={handleEditChange}
+                            />
+                          ) : (
+                            parcelamento.data_inicio
+                          )}
+                        </td>
+                        <td>
+                          {editingId === parcelamento.id ? (
+                            <>
+                              <Button variant="success" size="sm" onClick={handleSaveEdit} className="mr-2">
+                                <FontAwesomeIcon icon={faCheck} />
+                              </Button>
+                              <Button variant="secondary" size="sm" onClick={handleCancelEdit}>
+                                <FontAwesomeIcon icon={faTimes} />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => handleEdit(parcelamento)}>
+                                <FontAwesomeIcon icon={faEdit} />
+                              </Button>
+                              <Button variant="outline-danger" size="sm" className="mr-2" onClick={() => handleDeleteClick(parcelamento.id)}>
+                                <FontAwesomeIcon icon={faTrash} />
+                              </Button>
+                              <Button variant="outline-info" size="sm" className="mr-2" onClick={() => handleSimulation(parcelamento)}>
+                                <FontAwesomeIcon icon={faCalculator} />
+                              </Button>
+                              <Button variant="outline-secondary" size="sm" onClick={() => handleShowDetails(parcelamento)}>
+                                <FontAwesomeIcon icon={faEye} />
+                              </Button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                </Table>
+                </StyledTable>
               </Card.Body>
             </StyledCard>
           </Col>
         </Row>
 
-        <Modal show={showSimulationModal} onHide={() => setShowSimulationModal(false)}>
+        <StyledModal show={showSimulationModal} onHide={() => setShowSimulationModal(false)} isDarkMode={isDarkMode}>
           <Modal.Header closeButton>
             <Modal.Title>Simulação de Antecipação</Modal.Title>
           </Modal.Header>
@@ -368,11 +515,47 @@ const ParcelamentosPage = () => {
               Confirmar Antecipação
             </Button>
           </Modal.Footer>
-        </Modal>
+        </StyledModal>
+
+        <StyledModal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} isDarkMode={isDarkMode}>
+          <Modal.Header closeButton>
+            <Modal.Title>Confirmar Exclusão</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>Tem certeza que deseja excluir este parcelamento?</Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Excluir
+            </Button>
+          </Modal.Footer>
+        </StyledModal>
+
+        <StyledModal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} isDarkMode={isDarkMode}>
+          <Modal.Header closeButton>
+            <Modal.Title>Detalhes do Parcelamento</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {detailsParcelamento && (
+              <>
+                <p><strong>Descrição:</strong> {detailsParcelamento.descricao}</p>
+                <p><strong>Valor Total:</strong> R$ {parseFloat(detailsParcelamento.valor_total).toFixed(2)}</p>
+                <p><strong>Número de Parcelas:</strong> {detailsParcelamento.numero_parcelas}</p>
+                <p><strong>Valor da Parcela:</strong> R$ {(parseFloat(detailsParcelamento.valor_total) / parseInt(detailsParcelamento.numero_parcelas)).toFixed(2)}</p>
+                <p><strong>Data de Início:</strong> {new Date(detailsParcelamento.data_inicio).toLocaleDateString()}</p>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+              Fechar
+            </Button>
+          </Modal.Footer>
+        </StyledModal>
       </Container>
     </Layout>
   );
 };
 
 export default ParcelamentosPage;
-

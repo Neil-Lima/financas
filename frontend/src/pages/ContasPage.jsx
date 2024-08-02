@@ -146,18 +146,18 @@ const ContasPage = () => {
           <Col>
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
-                <Card.Title>Nova Conta</Card.Title>
+                <Card.Title></Card.Title>
                 <Form onSubmit={adicionarConta}>
                   <Row>
                     <Col md={4}>
                       <Form.Group>
-                        <Form.Label>Nome da Conta</Form.Label>
+                        <Form.Label>Descrição da Conta</Form.Label>
                         <Form.Control 
                           type="text" 
                           name="nome"
                           value={novaConta.nome}
                           onChange={handleNovaContaChange}
-                          placeholder="Ex: Conta Corrente" 
+                          placeholder="Ex: compras no shopping" 
                           required
                         />
                       </Form.Group>

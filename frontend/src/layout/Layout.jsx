@@ -10,22 +10,26 @@ const StyledContainer = styled(Container)`
   min-height: 100vh;
 `;
 
+const MainContent = styled.div`
+  transition: margin-left 0.3s ease-in-out;
+
+  @media (min-width: 769px) {
+    margin-left: 250px;
+  }
+`;
+
 const Layout = ({ children }) => {
   const { isDarkMode } = useTheme();
 
   return (
     <StyledContainer fluid className="p-0" isDarkMode={isDarkMode}>
-      <Row noGutters>
-        <Col md={2} className="d-none d-md-block">
-          <SidebarComp />
-        </Col>
-        <Col md={10}>
-          <NavbarComp />
-          <Container fluid>
-            {children}
-          </Container>
-        </Col>
-      </Row>
+      <SidebarComp />
+      <MainContent>
+        <NavbarComp />
+        <Container fluid>
+          {children}
+        </Container>
+      </MainContent>
     </StyledContainer>
   );
 };

@@ -1,5 +1,6 @@
 const Usuario = require('../models/Usuario');
 const Categoria = require('../models/Categoria');
+const Conta = require('../models/Conta');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -8,6 +9,7 @@ const usuariosController = {
     try {
       const newUser = await Usuario.create(req.body);
       await Categoria.insertDefaultCategories(newUser.id);
+      await Conta.insertDefaultAccounts(newUser.id);
       const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
       res.status(201).json({ token, user: { id: newUser.id, nome: newUser.nome, email: newUser.email } });
     } catch (error) {
@@ -58,6 +60,24 @@ const usuariosController = {
   deleteProfile: async (req, res) => {
     try {
       await Usuario.delete(req.user.id);
+      res.json({ message: 'Usuário deletado com sucesso' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  getAllUsers: async (req, res) => {
+    try {
+      const users = await Usuario.findAll();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  deleteUser: async (req, res) => {
+    try {
+      await Usuario.delete(req.params.id);
       res.json({ message: 'Usuário deletado com sucesso' });
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -79,6 +79,20 @@ const Conta = {
         }
       });
     });
+  },
+
+  insertDefaultAccounts: (usuario_id) => {
+    const defaultAccounts = [
+      { nome: 'Conta Corrente', saldo: 0, tipo: 'Corrente' },
+      { nome: 'Poupança', saldo: 0, tipo: 'Poupança' },
+      { nome: 'Carteira', saldo: 0, tipo: 'Dinheiro' }
+    ];
+
+    const promises = defaultAccounts.map(account => 
+      Conta.create({ ...account, usuario_id })
+    );
+
+    return Promise.all(promises);
   }
 };
 

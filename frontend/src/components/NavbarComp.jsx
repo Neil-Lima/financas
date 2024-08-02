@@ -9,7 +9,7 @@ const NavbarComp = () => {
 
   return (
     <Navbar bg={isDarkMode ? 'dark' : 'light'} variant={isDarkMode ? 'dark' : 'light'} expand="lg" className="mb-4 shadow-sm">
-      <Navbar.Brand href="#home">Finanças Pessoais</Navbar.Brand>
+      <Navbar.Brand href="#home"></Navbar.Brand>
       <Navbar.Toggle aria-controls="basic-navbar-nav" />
       <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
         <Nav>

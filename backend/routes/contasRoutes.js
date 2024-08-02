@@ -10,5 +10,6 @@ router.get('/', contasController.getAllContas);
 router.get('/:id', contasController.getContaById);
 router.put('/:id', contasController.updateConta);
 router.delete('/:id', contasController.deleteConta);
+router.post('/default', contasController.insertDefaultAccounts);
 
 module.exports = router;

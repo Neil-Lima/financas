@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Table, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPlus,
   faEdit,
-  faTrash
+  faTrash,
+  faEye,
+  faCheck,
+  faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
 import { Bar } from 'react-chartjs-2';
@@ -37,14 +40,40 @@ const StyledTable = styled(Table)`
   color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
 `;
 
+const StyledModal = styled(Modal)`
+  .modal-content {
+    background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
+
+  .modal-header {
+    border-bottom: 1px solid ${props => props.isDarkMode ? '#444' : '#dee2e6'};
+  }
+
+  .modal-footer {
+    border-top: 1px solid ${props => props.isDarkMode ? '#444' : '#dee2e6'};
+  }
+
+  .close {
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
+`;
+
 const EstoquePage = () => {
   const { isDarkMode } = useTheme();
   const [produtos, setProdutos] = useState([]);
-  const [novoProduto, setNovoProduto] = useState({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
-  const [editandoProduto, setEditandoProduto] = useState(null);
+  const [categorias, setCategorias] = useState([]);
+  const [novoProduto, setNovoProduto] = useState({ nome: '', quantidade: '', preco_unitario: '', categoria_id: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [editedProduto, setEditedProduto] = useState({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsProduto, setDetailsProduto] = useState(null);
 
   useEffect(() => {
     fetchProdutos();
+    fetchCategorias();
   }, []);
 
   const fetchProdutos = async () => {
@@ -59,6 +88,18 @@ const EstoquePage = () => {
     }
   };
 
+  const fetchCategorias = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/categorias', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCategorias(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error);
+    }
+  };
+
   const handleNovoProdutoChange = (e) => {
     setNovoProduto({ ...novoProduto, [e.target.name]: e.target.value });
   };
@@ -70,47 +111,60 @@ const EstoquePage = () => {
       await axios.post('http://localhost:5000/api/estoque', novoProduto, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNovoProduto({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
+      setNovoProduto({ nome: '', quantidade: '', preco_unitario: '', categoria_id: '' });
       fetchProdutos();
     } catch (error) {
       console.error('Erro ao adicionar produto:', error);
     }
   };
 
-  const iniciarEdicao = (produto) => {
-    setEditandoProduto(produto);
-    setNovoProduto(produto);
+  const handleEdit = (produto) => {
+    setEditingId(produto.id);
+    setEditedProduto(produto);
   };
 
-  const cancelarEdicao = () => {
-    setEditandoProduto(null);
-    setNovoProduto({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
+  const handleEditChange = (e) => {
+    setEditedProduto({ ...editedProduto, [e.target.name]: e.target.value });
   };
 
-  const salvarEdicao = async () => {
+  const handleSaveEdit = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/estoque/${editandoProduto.id}`, novoProduto, {
+      await axios.put(`http://localhost:5000/api/estoque/${editingId}`, editedProduto, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setEditandoProduto(null);
-      setNovoProduto({ nome: '', quantidade: '', precoUnitario: '', categoria: '' });
+      setEditingId(null);
       fetchProdutos();
     } catch (error) {
       console.error('Erro ao editar produto:', error);
     }
   };
 
-  const deletarProduto = async (id) => {
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleDeleteClick = (id) => {
+    setDeleteId(id);
+    setShowDeleteModal(true);
+  };
+
+  const deletarProduto = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/estoque/${id}`, {
+      await axios.delete(`http://localhost:5000/api/estoque/${deleteId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchProdutos();
+      setShowDeleteModal(false);
     } catch (error) {
       console.error('Erro ao deletar produto:', error);
     }
+  };
+
+  const handleShowDetails = (produto) => {
+    setDetailsProduto(produto);
+    setShowDetailsModal(true);
   };
 
   const dadosGrafico = {
@@ -123,7 +177,7 @@ const EstoquePage = () => {
       },
       {
         label: 'Valor Total (R$)',
-        data: produtos.map(produto => produto.quantidade * produto.precoUnitario),
+        data: produtos.map(produto => produto.quantidade * produto.preco_unitario),
         backgroundColor: 'rgba(255, 99, 132, 0.6)',
       }
     ]
@@ -172,8 +226,8 @@ const EstoquePage = () => {
           <Col>
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
-                <Card.Title>{editandoProduto ? 'Editar Produto' : 'Novo Produto'}</Card.Title>
-                <Form onSubmit={editandoProduto ? salvarEdicao : adicionarProduto}>
+                <Card.Title>{editingId ? 'Editar Produto' : 'Novo Produto'}</Card.Title>
+                <Form onSubmit={editingId ? handleSaveEdit : adicionarProduto}>
                   <Row>
                     <Col md={3}>
                       <Form.Group>
@@ -181,8 +235,8 @@ const EstoquePage = () => {
                         <Form.Control 
                           type="text" 
                           name="nome"
-                          value={novoProduto.nome}
-                          onChange={handleNovoProdutoChange}
+                          value={editingId ? editedProduto.nome : novoProduto.nome}
+                          onChange={editingId ? handleEditChange : handleNovoProdutoChange}
                           required
                         />
                       </Form.Group>
@@ -193,8 +247,8 @@ const EstoquePage = () => {
                         <Form.Control 
                           type="number" 
                           name="quantidade"
-                          value={novoProduto.quantidade}
-                          onChange={handleNovoProdutoChange}
+                          value={editingId ? editedProduto.quantidade : novoProduto.quantidade}
+                          onChange={editingId ? handleEditChange : handleNovoProdutoChange}
                           required
                         />
                       </Form.Group>
@@ -204,9 +258,9 @@ const EstoquePage = () => {
                         <Form.Label>Preço Unitário</Form.Label>
                         <Form.Control 
                           type="number" 
-                          name="precoUnitario"
-                          value={novoProduto.precoUnitario}
-                          onChange={handleNovoProdutoChange}
+                          name="preco_unitario"
+                          value={editingId ? editedProduto.preco_unitario : novoProduto.preco_unitario}
+                          onChange={editingId ? handleEditChange : handleNovoProdutoChange}
                           required
                         />
                       </Form.Group>
@@ -216,25 +270,26 @@ const EstoquePage = () => {
                         <Form.Label>Categoria</Form.Label>
                         <Form.Control 
                           as="select"
-                          name="categoria"
-                          value={novoProduto.categoria}
-                          onChange={handleNovoProdutoChange}
+                          name="categoria_id"
+                          value={editingId ? editedProduto.categoria_id : novoProduto.categoria_id}
+                          onChange={editingId ? handleEditChange : handleNovoProdutoChange}
                           required
                         >
                           <option value="">Selecione uma categoria</option>
-                          <option value="Categoria 1">Categoria 1</option>
-                          <option value="Categoria 2">Categoria 2</option>
-                          <option value="Categoria 3">Categoria 3</option>
+                          {categorias.map(categoria => (
+                            <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+                          ))}
                         </Form.Control>
                       </Form.Group>
                     </Col>
                   </Row>
                   <Button variant="primary" type="submit" className="mt-3">
-                    <FontAwesomeIcon icon={editandoProduto ? faEdit : faPlus} className="mr-2" />
-                    {editandoProduto ? 'Salvar Alterações' : 'Adicionar Produto'}
+                    <FontAwesomeIcon icon={editingId ? faCheck : faPlus} className="mr-2" />
+                    {editingId ? 'Salvar Alterações' : 'Adicionar Produto'}
                   </Button>
-                  {editandoProduto && (
-                    <Button variant="secondary" onClick={cancelarEdicao} className="mt-3 ml-2">
+                  {editingId && (
+                    <Button variant="secondary" onClick={handleCancelEdit} className="mt-3 ml-2">
+                      <FontAwesomeIcon icon={faTimes} className="mr-2" />
                       Cancelar Edição
                     </Button>
                   )}
@@ -276,15 +331,18 @@ const EstoquePage = () => {
                   <tr key={produto.id}>
                     <td>{produto.nome}</td>
                     <td>{produto.quantidade}</td>
-                    <td>R$ {parseFloat(produto.precoUnitario).toFixed(2)}</td>
-                    <td>R$ {(produto.quantidade * produto.precoUnitario).toFixed(2)}</td>
-                    <td>{produto.categoria}</td>
+                    <td>R$ {parseFloat(produto.preco_unitario).toFixed(2)}</td>
+                    <td>R$ {(produto.quantidade * produto.preco_unitario).toFixed(2)}</td>
+                    <td>{categorias.find(cat => cat.id === produto.categoria_id)?.nome}</td>
                     <td>
-                      <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => iniciarEdicao(produto)}>
+                      <Button variant="outline-primary" size="sm" className="mr-2" onClick={() => handleEdit(produto)}>
                         <FontAwesomeIcon icon={faEdit} />
                       </Button>
-                      <Button variant="outline-danger" size="sm" onClick={() => deletarProduto(produto.id)}>
+                      <Button variant="outline-danger" size="sm" className="mr-2" onClick={() => handleDeleteClick(produto.id)}>
                         <FontAwesomeIcon icon={faTrash} />
+                      </Button>
+                      <Button variant="outline-info" size="sm" onClick={() => handleShowDetails(produto)}>
+                        <FontAwesomeIcon icon={faEye} />
                       </Button>
                     </td>
                   </tr>
@@ -293,6 +351,43 @@ const EstoquePage = () => {
             </StyledTable>
           </Card.Body>
         </StyledCard>
+
+        <StyledModal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} isDarkMode={isDarkMode}>
+          <Modal.Header closeButton>
+            <Modal.Title>Confirmar Exclusão</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>Tem certeza que deseja excluir este produto?</Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={deletarProduto}>
+              Excluir
+            </Button>
+          </Modal.Footer>
+        </StyledModal>
+
+        <StyledModal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} isDarkMode={isDarkMode}>
+          <Modal.Header closeButton>
+            <Modal.Title>Detalhes do Produto</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {detailsProduto && (
+              <>
+                <p><strong>Nome:</strong> {detailsProduto.nome}</p>
+                <p><strong>Quantidade:</strong> {detailsProduto.quantidade}</p>
+                <p><strong>Preço Unitário:</strong> R$ {parseFloat(detailsProduto.preco_unitario).toFixed(2)}</p>
+                <p><strong>Valor Total:</strong> R$ {(detailsProduto.quantidade * detailsProduto.preco_unitario).toFixed(2)}</p>
+                <p><strong>Categoria:</strong> {categorias.find(cat => cat.id === detailsProduto.categoria_id)?.nome}</p>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+              Fechar
+            </Button>
+          </Modal.Footer>
+        </StyledModal>
       </StyledContainer>
     </Layout>
   );

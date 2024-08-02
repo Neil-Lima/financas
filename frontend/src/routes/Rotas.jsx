@@ -14,6 +14,7 @@ import ConfiguracoesPage from '../pages/ConfiguracoesPage'
 import HistoricoPage from '../pages/HistoricoPage'
 import PerfilPage from '../pages/PerfilPage'
 import EstoquePage from '../pages/EstoquePage'
+import UsuariosPage from '../pages/UsuariosPage'
 
 
 function Rotas() {
@@ -34,6 +35,7 @@ function Rotas() {
         <Route path="/historico" element={<HistoricoPage/>} />
         <Route path="/perfil" element={<PerfilPage/>} />
         <Route path="/estoque" element={<EstoquePage/>} />
+        <Route path="/usuarios" element={<UsuariosPage/>} /> 
       </Routes>
     </BrowserRouter>
   )

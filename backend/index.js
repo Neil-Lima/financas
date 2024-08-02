@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const db = require('./config/database');
 const Usuario = require('./models/Usuario');
 const Conta = require('./models/Conta');
@@ -20,19 +21,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize database tables
-Usuario.createTable();
-Conta.createTable();
-Transacao.createTable();
-Categoria.createTable();
-Orcamento.createTable();
-Meta.createTable();
-Financiamento.createTable();
-Parcelamento.createTable();
-Estoque.createTable();
-Despesa.createTable();
+// Configuração do caminho do banco de dados
+const dbPath = process.env.NODE_ENV === 'production' 
+  ? path.join('/tmp', 'financas.db')
+  : path.join(__dirname, 'financas.db');
 
-// Routes
+// Inicializar tabelas do banco de dados
+Usuario.createTable(dbPath);
+Conta.createTable(dbPath);
+Transacao.createTable(dbPath);
+Categoria.createTable(dbPath);
+Orcamento.createTable(dbPath);
+Meta.createTable(dbPath);
+Financiamento.createTable(dbPath);
+Parcelamento.createTable(dbPath);
+Estoque.createTable(dbPath);
+Despesa.createTable(dbPath);
+
+// Rotas
 app.use('/api/usuarios', require('./routes/usuariosRoutes'));
 app.use('/api/contas', require('./routes/contasRoutes'));
 app.use('/api/transacoes', require('./routes/transacoesRoutes'));
@@ -46,4 +52,9 @@ app.use('/api/relatorios', require('./routes/relatoriosRoutes'));
 app.use('/api/despesas', require('./routes/despesasRoutes'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+}
+
+module.exports = app;

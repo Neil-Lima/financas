@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const path = require('path');
 const db = require('./config/database');
 const Usuario = require('./models/Usuario');
 const Conta = require('./models/Conta');
@@ -21,22 +20,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Configuração do caminho do banco de dados
-const dbPath = process.env.NODE_ENV === 'production' 
-  ? path.join('/tmp', 'financas.db')
-  : path.join(__dirname, 'financas.db');
-
 // Inicializar tabelas do banco de dados
-Usuario.createTable(dbPath);
-Conta.createTable(dbPath);
-Transacao.createTable(dbPath);
-Categoria.createTable(dbPath);
-Orcamento.createTable(dbPath);
-Meta.createTable(dbPath);
-Financiamento.createTable(dbPath);
-Parcelamento.createTable(dbPath);
-Estoque.createTable(dbPath);
-Despesa.createTable(dbPath);
+Usuario.createTable();
+Conta.createTable();
+Transacao.createTable();
+Categoria.createTable();
+Orcamento.createTable();
+Meta.createTable();
+Financiamento.createTable();
+Parcelamento.createTable();
+Estoque.createTable();
+Despesa.createTable();
 
 // Rotas
 app.use('/api/usuarios', require('./routes/usuariosRoutes'));

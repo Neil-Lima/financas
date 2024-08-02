@@ -177,7 +177,7 @@ const ConfiguracoesPage = () => {
                     <Form.Control 
                       as="select" 
                       name="idioma"
-                      value={configuracoes.idioma}
+                      value={configuracoes.idioma}//idioma
                       onChange={handleInputChange}
                     >
                       <option value="pt-BR">Português (Brasil)</option>

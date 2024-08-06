@@ -1,99 +1,46 @@
-const db = require('../config/database');
+const mongoose = require('mongoose');
 
-const Conta = {
-  createTable: () => {
-    const sql = `
-      CREATE TABLE IF NOT EXISTS contas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        usuario_id INTEGER,
-        nome TEXT NOT NULL,
-        saldo REAL NOT NULL,
-        tipo TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
-      )
-    `;
-    return db.run(sql);
+const contaSchema = new mongoose.Schema({
+  usuario: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'Usuario'
   },
-
-  create: (conta) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'INSERT INTO contas (usuario_id, nome, saldo, tipo) VALUES (?, ?, ?, ?)';
-      db.run(sql, [conta.usuario_id, conta.nome, conta.saldo, conta.tipo], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id: this.lastID, ...conta });
-        }
-      });
-    });
+  nome: {
+    type: String,
+    required: true,
+    trim: true
   },
-
-  findAll: (usuario_id) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM contas WHERE usuario_id = ?';
-      db.all(sql, [usuario_id], (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+  tipo: {
+    type: String,
+    required: true,
+    enum: ['Conta Corrente', 'Conta Poupança', 'Cartão de Crédito', 'Investimento', 'Dinheiro', 'Outros']
   },
-
-  findById: (id, usuario_id) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM contas WHERE id = ? AND usuario_id = ?';
-      db.get(sql, [id, usuario_id], (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
+  saldo: {
+    type: Number,
+    required: true,
+    default: 0
   },
-
-  update: (id, conta, usuario_id) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'UPDATE contas SET nome = ?, saldo = ?, tipo = ? WHERE id = ? AND usuario_id = ?';
-      db.run(sql, [conta.nome, conta.saldo, conta.tipo, id, usuario_id], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id, ...conta });
-        }
-      });
-    });
+  instituicao: {
+    type: String,
+    trim: true
   },
-
-  delete: (id, usuario_id) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'DELETE FROM contas WHERE id = ? AND usuario_id = ?';
-      db.run(sql, [id, usuario_id], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id });
-        }
-      });
-    });
+  numero: {
+    type: String,
+    trim: true
   },
-
-  insertDefaultAccounts: (usuario_id) => {
-    const defaultAccounts = [
-      { nome: 'Conta Corrente', saldo: 0, tipo: 'Corrente' },
-      { nome: 'Poupança', saldo: 0, tipo: 'Poupança' },
-      { nome: 'Carteira', saldo: 0, tipo: 'Dinheiro' }
-    ];
-
-    const promises = defaultAccounts.map(account => 
-      Conta.create({ ...account, usuario_id })
-    );
-
-    return Promise.all(promises);
+  cor: {
+    type: String,
+    default: '#000000'
+  },
+  ativo: {
+    type: Boolean,
+    default: true
   }
-};
+}, {
+  timestamps: true
+});
+
+const Conta = mongoose.model('Conta', contaSchema);
 
 module.exports = Conta;

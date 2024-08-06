@@ -1,26 +1,22 @@
 const jwt = require('jsonwebtoken');
+const Usuario = require('../models/Usuario');
 
-module.exports = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ message: 'Token não fornecido' });
-  }
+const auth = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization').replace('Bearer ', '');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const usuario = await Usuario.findOne({ _id: decoded._id, 'tokens.token': token });
 
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2) {
-    return res.status(401).json({ message: 'Token error' });
-  }
-
-  const [scheme, token] = parts;
-  if (!/^Bearer$/i.test(scheme)) {
-    return res.status(401).json({ message: 'Token mal formatado' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ message: 'Token inválido' });
+    if (!usuario) {
+      throw new Error();
     }
-    req.user = decoded;
-    return next();
-  });
+
+    req.token = token;
+    req.usuario = usuario;
+    next();
+  } catch (error) {
+    res.status(401).send({ error: 'Please authenticate.' });
+  }
 };
+
+module.exports = auth;

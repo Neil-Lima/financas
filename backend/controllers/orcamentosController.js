@@ -3,7 +3,7 @@ const Orcamento = require('../models/Orcamento');
 const orcamentosController = {
   createOrcamento: async (req, res) => {
     try {
-      const novoOrcamento = await Orcamento.create({ ...req.body, usuario_id: req.user.id });
+      const novoOrcamento = await Orcamento.create({ ...req.body, usuario: req.user.id });
       res.status(201).json(novoOrcamento);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -13,7 +13,11 @@ const orcamentosController = {
   getAllOrcamentos: async (req, res) => {
     try {
       const { mes, ano } = req.query;
-      const orcamentos = await Orcamento.findAll(req.user.id, mes, ano);
+      const orcamentos = await Orcamento.find({ 
+        usuario: req.user.id,
+        mes: parseInt(mes),
+        ano: parseInt(ano)
+      }).populate('categoria');
       res.json(orcamentos);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -22,7 +26,7 @@ const orcamentosController = {
 
   getOrcamentoById: async (req, res) => {
     try {
-      const orcamento = await Orcamento.findById(req.params.id, req.user.id);
+      const orcamento = await Orcamento.findOne({ _id: req.params.id, usuario: req.user.id }).populate('categoria');
       if (orcamento) {
         res.json(orcamento);
       } else {
@@ -35,7 +39,11 @@ const orcamentosController = {
 
   updateOrcamento: async (req, res) => {
     try {
-      const orcamentoAtualizado = await Orcamento.update({ ...req.body, id: req.params.id, usuario_id: req.user.id });
+      const orcamentoAtualizado = await Orcamento.findOneAndUpdate(
+        { _id: req.params.id, usuario: req.user.id },
+        req.body,
+        { new: true }
+      ).populate('categoria');
       res.json(orcamentoAtualizado);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -44,7 +52,7 @@ const orcamentosController = {
 
   deleteOrcamento: async (req, res) => {
     try {
-      await Orcamento.delete(req.params.id, req.user.id);
+      await Orcamento.findOneAndDelete({ _id: req.params.id, usuario: req.user.id });
       res.json({ message: 'Orçamento deletado com sucesso' });
     } catch (error) {
       res.status(500).json({ error: error.message });

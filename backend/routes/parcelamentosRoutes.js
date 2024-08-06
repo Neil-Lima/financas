@@ -1,4 +1,3 @@
-// parcelamentosRoutes.js
 const express = require('express');
 const router = express.Router();
 const parcelamentosController = require('../controllers/parcelamentosController');

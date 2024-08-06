@@ -1,61 +1,41 @@
-// parcelamentosController.js
-const db = require('../config/database');
+const Parcelamento = require('../models/Parcelamento');
 
 const parcelamentosController = {
   getAllParcelamentos: async (req, res) => {
     try {
-      const sql = 'SELECT * FROM parcelamentos WHERE usuario_id = ?';
-      db.all(sql, [req.user.id], (err, rows) => {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
-        res.json(rows);
-      });
+      const parcelamentos = await Parcelamento.find({ usuario: req.user.id });
+      res.json(parcelamentos);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
 
   createParcelamento: async (req, res) => {
-    const { descricao, valor_total, numero_parcelas, data_inicio } = req.body;
     try {
-      const sql = 'INSERT INTO parcelamentos (usuario_id, descricao, valor_total, numero_parcelas, data_inicio) VALUES (?, ?, ?, ?, ?)';
-      db.run(sql, [req.user.id, descricao, valor_total, numero_parcelas, data_inicio], function(err) {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
-        res.json({ id: this.lastID, descricao, valor_total, numero_parcelas, data_inicio });
-      });
+      const novoParcelamento = await Parcelamento.create({ ...req.body, usuario: req.user.id });
+      res.status(201).json(novoParcelamento);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
 
   updateParcelamento: async (req, res) => {
-    const { id, descricao, valor_total, numero_parcelas, data_inicio } = req.body;
     try {
-      const sql = 'UPDATE parcelamentos SET descricao = ?, valor_total = ?, numero_parcelas = ?, data_inicio = ? WHERE id = ? AND usuario_id = ?';
-      db.run(sql, [descricao, valor_total, numero_parcelas, data_inicio, id, req.user.id], function(err) {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
-        res.json({ message: 'Parcelamento atualizado com sucesso' });
-      });
+      const parcelamentoAtualizado = await Parcelamento.findOneAndUpdate(
+        { _id: req.params.id, usuario: req.user.id },
+        req.body,
+        { new: true }
+      );
+      res.json(parcelamentoAtualizado);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
 
   deleteParcelamento: async (req, res) => {
-    const { id } = req.params;
     try {
-      const sql = 'DELETE FROM parcelamentos WHERE id = ? AND usuario_id = ?';
-      db.run(sql, [id, req.user.id], function(err) {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
-        res.json({ message: 'Parcelamento deletado com sucesso' });
-      });
+      await Parcelamento.findOneAndDelete({ _id: req.params.id, usuario: req.user.id });
+      res.json({ message: 'Parcelamento deletado com sucesso' });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

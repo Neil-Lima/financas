@@ -3,7 +3,7 @@ const Categoria = require('../models/Categoria');
 const categoriasController = {
   getAllCategorias: async (req, res) => {
     try {
-      const categorias = await Categoria.findAll(req.user.id);
+      const categorias = await Categoria.find({ usuario: req.user.id });
       res.json(categorias);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -12,7 +12,7 @@ const categoriasController = {
 
   createCategoria: async (req, res) => {
     try {
-      const novaCategoria = await Categoria.create({ ...req.body, usuario_id: req.user.id });
+      const novaCategoria = await Categoria.create({ ...req.body, usuario: req.user.id });
       res.status(201).json(novaCategoria);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -21,7 +21,11 @@ const categoriasController = {
 
   updateCategoria: async (req, res) => {
     try {
-      const categoriaAtualizada = await Categoria.update({ ...req.body, id: req.params.id, usuario_id: req.user.id });
+      const categoriaAtualizada = await Categoria.findOneAndUpdate(
+        { _id: req.params.id, usuario: req.user.id },
+        req.body,
+        { new: true }
+      );
       res.json(categoriaAtualizada);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -30,7 +34,7 @@ const categoriasController = {
 
   deleteCategoria: async (req, res) => {
     try {
-      await Categoria.delete(req.params.id, req.user.id);
+      await Categoria.findOneAndDelete({ _id: req.params.id, usuario: req.user.id });
       res.json({ message: 'Categoria deletada com sucesso' });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -39,8 +43,23 @@ const categoriasController = {
 
   insertDefaultCategories: async (req, res) => {
     try {
-      await Categoria.insertDefaultCategories(req.user.id);
-      res.json({ message: 'Categorias padrão inseridas com sucesso' });
+      const defaultCategories = [
+        { nome: 'Alimentação', tipo: 'despesa' },
+        { nome: 'Transporte', tipo: 'despesa' },
+        { nome: 'Moradia', tipo: 'despesa' },
+        { nome: 'Saúde', tipo: 'despesa' },
+        { nome: 'Educação', tipo: 'despesa' },
+        { nome: 'Lazer', tipo: 'despesa' },
+        { nome: 'Salário', tipo: 'receita' },
+        { nome: 'Investimentos', tipo: 'receita' },
+        { nome: 'Outros', tipo: 'despesa' }
+      ];
+
+      const createdCategories = await Categoria.insertMany(
+        defaultCategories.map(category => ({ ...category, usuario: req.user.id }))
+      );
+
+      res.json({ message: 'Categorias padrão inseridas com sucesso', categorias: createdCategories });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

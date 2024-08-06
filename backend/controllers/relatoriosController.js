@@ -1,4 +1,6 @@
-const Relatorio = require('../models/Relatorio');
+const Transacao = require('../models/Transacao');
+const Meta = require('../models/Meta');
+const Orcamento = require('../models/Orcamento');
 const PDFDocument = require('pdfkit');
 
 const relatoriosController = {
@@ -7,11 +9,11 @@ const relatoriosController = {
       const { dataInicio, dataFim } = req.query;
       const usuario_id = req.user.id;
 
-      const resumoFinanceiro = await Relatorio.getResumoFinanceiro(usuario_id, dataInicio, dataFim);
-      const transacoesPorCategoria = await Relatorio.getTransacoesPorCategoria(usuario_id, dataInicio, dataFim);
-      const fluxoCaixa = await Relatorio.getFluxoCaixa(usuario_id, dataInicio, dataFim);
-      const progressoMetas = await Relatorio.getProgressoMetas(usuario_id);
-      const desempenhoOrcamentos = await Relatorio.getDesempenhoOrcamentos(usuario_id, new Date().getMonth() + 1, new Date().getFullYear());
+      const resumoFinanceiro = await getResumoFinanceiro(usuario_id, dataInicio, dataFim);
+      const transacoesPorCategoria = await getTransacoesPorCategoria(usuario_id, dataInicio, dataFim);
+      const fluxoCaixa = await getFluxoCaixa(usuario_id, dataInicio, dataFim);
+      const progressoMetas = await getProgressoMetas(usuario_id);
+      const desempenhoOrcamentos = await getDesempenhoOrcamentos(usuario_id, new Date().getMonth() + 1, new Date().getFullYear());
 
       const relatorioCompleto = {
         resumoFinanceiro,
@@ -32,11 +34,11 @@ const relatoriosController = {
       const { dataInicio, dataFim } = req.query;
       const usuario_id = req.user.id;
 
-      const resumoFinanceiro = await Relatorio.getResumoFinanceiro(usuario_id, dataInicio, dataFim);
-      const transacoesPorCategoria = await Relatorio.getTransacoesPorCategoria(usuario_id, dataInicio, dataFim);
-      const fluxoCaixa = await Relatorio.getFluxoCaixa(usuario_id, dataInicio, dataFim);
-      const progressoMetas = await Relatorio.getProgressoMetas(usuario_id);
-      const desempenhoOrcamentos = await Relatorio.getDesempenhoOrcamentos(usuario_id, new Date().getMonth() + 1, new Date().getFullYear());
+      const resumoFinanceiro = await getResumoFinanceiro(usuario_id, dataInicio, dataFim);
+      const transacoesPorCategoria = await getTransacoesPorCategoria(usuario_id, dataInicio, dataFim);
+      const fluxoCaixa = await getFluxoCaixa(usuario_id, dataInicio, dataFim);
+      const progressoMetas = await getProgressoMetas(usuario_id);
+      const desempenhoOrcamentos = await getDesempenhoOrcamentos(usuario_id, new Date().getMonth() + 1, new Date().getFullYear());
 
       const doc = new PDFDocument();
       res.setHeader('Content-Type', 'application/pdf');
@@ -82,5 +84,115 @@ const relatoriosController = {
     }
   }
 };
+
+async function getResumoFinanceiro(usuario_id, dataInicio, dataFim) {
+  const result = await Transacao.aggregate([
+    {
+      $match: {
+        usuario: usuario_id,
+        data: { $gte: new Date(dataInicio), $lte: new Date(dataFim) }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        receita_total: { $sum: { $cond: [{ $eq: ["$tipo", "receita"] }, "$valor", 0] } },
+        despesa_total: { $sum: { $cond: [{ $eq: ["$tipo", "despesa"] }, "$valor", 0] } },
+        saldo_total: { $sum: { $cond: [{ $eq: ["$tipo", "receita"] }, "$valor", { $multiply: ["$valor", -1] }] } }
+      }
+    }
+  ]);
+
+  return result[0] || { receita_total: 0, despesa_total: 0, saldo_total: 0 };
+}
+
+async function getTransacoesPorCategoria(usuario_id, dataInicio, dataFim) {
+  return Transacao.aggregate([
+    {
+      $match: {
+        usuario: usuario_id,
+        data: { $gte: new Date(dataInicio), $lte: new Date(dataFim) }
+      }
+    },
+    {
+      $group: {
+        _id: "$categoria",
+        total: { $sum: "$valor" }
+      }
+    },
+    {
+      $lookup: {
+        from: "categorias",
+        localField: "_id",
+        foreignField: "_id",
+        as: "categoria_info"
+      }
+    },
+    {
+      $project: {
+        categoria: { $arrayElemAt: ["$categoria_info.nome", 0] },
+        total: 1
+      }
+    }
+  ]);
+}
+
+async function getFluxoCaixa(usuario_id, dataInicio, dataFim) {
+  return Transacao.aggregate([
+    {
+      $match: {
+        usuario: usuario_id,
+        data: { $gte: new Date(dataInicio), $lte: new Date(dataFim) }
+      }
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m", date: "$data" } },
+        receitas: { $sum: { $cond: [{ $eq: ["$tipo", "receita"] }, "$valor", 0] } },
+        despesas: { $sum: { $cond: [{ $eq: ["$tipo", "despesa"] }, "$valor", 0] } }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        mes: "$_id",
+        receitas: 1,
+        despesas: 1
+      }
+    },
+    { $sort: { mes: 1 } }
+  ]);
+}
+
+async function getProgressoMetas(usuario_id) {
+  return Meta.find({ usuario: usuario_id, concluida: false });
+}
+
+async function getDesempenhoOrcamentos(usuario_id, mes, ano) {
+  return Orcamento.aggregate([
+    {
+      $match: {
+        usuario: usuario_id,
+        mes: mes,
+        ano: ano
+      }
+    },
+    {
+      $lookup: {
+        from: "categorias",
+        localField: "categoria",
+        foreignField: "_id",
+        as: "categoria_info"
+      }
+    },
+    {
+      $project: {
+        categoria: { $arrayElemAt: ["$categoria_info.nome", 0] },
+        valor_planejado: 1,
+        valor_atual: 1
+      }
+    }
+  ]);
+}
 
 module.exports = relatoriosController;

@@ -1,17 +1,13 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const mongoose = require('mongoose');
 
-const dbPath = process.env.NODE_ENV === 'production'
-  ? '/tmp/financas.db'
-  : path.join(__dirname, '..', 'financas.db');
-
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Erro ao abrir o banco de dados', err);
-  } else {
-    console.log('Conectado ao banco de dados SQLite.');
-    db.run(`PRAGMA foreign_keys = ON`);
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect('mongodb://localhost:27017/financas_db');
+    console.log(`MongoDB conectado: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Erro: ${error.message}`);
+    process.exit(1);
   }
-});
+};
 
-module.exports = db;
+module.exports = connectDB;

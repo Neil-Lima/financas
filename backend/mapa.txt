@@ -40,3 +40,4 @@ backend/
 │   ├── Estoque.js
 │   └── Configuracao.js
 └── index.js
+.env

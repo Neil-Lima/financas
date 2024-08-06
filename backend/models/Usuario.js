@@ -1,102 +1,64 @@
-const db = require('../config/database');
-const bcrypt = require('bcrypt');
+// models/Usuario.js
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const Usuario = {
-  createTable: () => {
-    const sql = `
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        senha TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    return db.run(sql);
+const usuarioSchema = new mongoose.Schema({
+  nome: {
+    type: String,
+    required: true,
+    trim: true
   },
-
-  create: async (usuario) => {
-    const hashedPassword = await bcrypt.hash(usuario.senha, 10);
-    return new Promise((resolve, reject) => {
-      const sql = 'INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)';
-      db.run(sql, [usuario.nome, usuario.email, hashedPassword], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id: this.lastID, nome: usuario.nome, email: usuario.email });
-        }
-      });
-    });
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
   },
-
-  findByEmail: (email) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM usuarios WHERE email = ?';
-      db.get(sql, [email], (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
+  senha: {
+    type: String,
+    required: true,
+    minlength: 7
   },
-
-  findById: (id) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT id, nome, email, created_at FROM usuarios WHERE id = ?';
-      db.get(sql, [id], (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
-  },
-
-  update: async (id, usuario) => {
-    let hashedPassword = usuario.senha;
-    if (usuario.senha) {
-      hashedPassword = await bcrypt.hash(usuario.senha, 10);
+  tokens: [{
+    token: {
+      type: String,
+      required: true
     }
-    return new Promise((resolve, reject) => {
-      const sql = 'UPDATE usuarios SET nome = ?, email = ?, senha = ? WHERE id = ?';
-      db.run(sql, [usuario.nome, usuario.email, hashedPassword, id], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id, nome: usuario.nome, email: usuario.email });
-        }
-      });
-    });
-  },
+  }]
+}, {
+  timestamps: true
+});
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'DELETE FROM usuarios WHERE id = ?';
-      db.run(sql, [id], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id });
-        }
-      });
-    });
-  },
-
-  findAll: () => {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT id, nome, email, created_at FROM usuarios';
-      db.all(sql, [], (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
-  }
+usuarioSchema.methods.generateAuthToken = async function() {
+  const usuario = this;
+  const token = jwt.sign({ _id: usuario._id.toString() }, process.env.JWT_SECRET);
+  usuario.tokens = usuario.tokens.concat({ token });
+  await usuario.save();
+  return token;
 };
+
+usuarioSchema.statics.findByCredentials = async (email, senha) => {
+  const usuario = await Usuario.findOne({ email });
+  if (!usuario) {
+    throw new Error('Unable to login');
+  }
+  const isMatch = await bcrypt.compare(senha, usuario.senha);
+  if (!isMatch) {
+    throw new Error('Unable to login');
+  }
+  return usuario;
+};
+
+usuarioSchema.pre('save', async function (next) {
+  const usuario = this;
+  if (usuario.isModified('senha')) {
+    usuario.senha = await bcrypt.hash(usuario.senha, 8);
+  }
+  next();
+});
+
+const Usuario = mongoose.model('Usuario', usuarioSchema);
 
 module.exports = Usuario;

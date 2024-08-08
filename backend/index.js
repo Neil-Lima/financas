@@ -14,10 +14,10 @@ const estoqueRoutes = require('./estoque/estoqueRoute');
 
 const app = express();
 
-// Configuração do CORS
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
-  credentials: true
+  origin: ['http://localhost:3000', 'https://animescrud.netlify.app', 'https://animes-crud.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 connectDB();
@@ -34,9 +34,6 @@ app.use('/api/financiamentos', financiamentoRoutes);
 app.use('/api/despesas', despesaRoutes);
 app.use('/api/parcelamentos', parcelamentoRoutes);
 app.use('/api/estoque', estoqueRoutes);
-
-
-
 
 const PORT = process.env.PORT || 5000;
 

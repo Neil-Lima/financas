@@ -24,6 +24,11 @@ connectDB();
 
 app.use(express.json());
 
+// Welcome route
+app.get('/', (req, res) => {
+  res.json({ message: 'Bem-vindo à API de Finanças' });
+});
+
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/contas', contaRoutes);

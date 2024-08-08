@@ -1,24 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Form, Table, Modal, Badge, ProgressBar, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Table, Modal, Alert, ProgressBar } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faPlus, 
-  faEdit, 
-  faTrash, 
-  faFlag, 
-  faTrophy, 
-  faStar,
-  faFileExport
-} from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Line } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
 import axios from 'axios';
 import { useTheme } from '../context/ThemeContext';
-import { CSVLink } from 'react-csv';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const StyledContainer = styled(Container)`
   padding: 20px;
@@ -30,6 +18,7 @@ const StyledCard = styled(Card)`
   transition: all 0.3s ease;
   background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
   color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  margin-bottom: 20px;
 
   &:hover {
     transform: translateY(-5px);
@@ -37,34 +26,48 @@ const StyledCard = styled(Card)`
   }
 `;
 
-const ChartContainer = styled.div`
-  height: 300px;
-  width: 100%;
-`;
-
 const StyledTable = styled(Table)`
   color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+`;
+
+const ResponsiveButton = styled(Button)`
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+  }
+`;
+
+const StyledModal = styled(Modal)`
+  .modal-content {
+    background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
 `;
 
 const MetasPage = () => {
   const { isDarkMode } = useTheme();
   const [metas, setMetas] = useState([]);
-  const [newMeta, setNewMeta] = useState({ descricao: '', valor_alvo: '', data_limite: '' });
-  const [showRewardModal, setShowRewardModal] = useState(false);
-  const [currentReward, setCurrentReward] = useState('');
-  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
-  const [suggestedGoal, setSuggestedGoal] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingMeta, setEditingMeta] = useState(null);
-  const [alert, setAlert] = useState({ show: false, variant: '', message: '' });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
-  const [sortField, setSortField] = useState('');
-  const [sortDirection, setSortDirection] = useState('asc');
-  const [filter, setFilter] = useState('');
+  const [newMeta, setNewMeta] = useState({
+    descricao: '',
+    valor_alvo: '',
+    valor_atual: '',
+    data_limite: '',
+    categoria: '',
+    recorrente: false,
+    periodo_recorrencia: ''
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [editedMeta, setEditedMeta] = useState({});
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsMeta, setDetailsMeta] = useState(null);
+  const [alert, setAlert] = useState({ show: false, message: '', variant: 'success' });
+  const [filtro, setFiltro] = useState('');
+  const [ordenacao, setOrdenacao] = useState('data_limite');
+  const [estatisticas, setEstatisticas] = useState(null);
 
   useEffect(() => {
     fetchMetas();
+    fetchEstatisticas();
   }, []);
 
   const fetchMetas = async () => {
@@ -76,139 +79,156 @@ const MetasPage = () => {
       setMetas(response.data);
     } catch (error) {
       console.error('Erro ao buscar metas:', error);
-      showAlert('danger', 'Erro ao buscar metas');
+      showAlert('Erro ao buscar metas', 'danger');
+    }
+  };
+
+  const fetchEstatisticas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/metas/estatisticas', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEstatisticas(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error);
     }
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewMeta(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setNewMeta({ 
+      ...newMeta, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/metas', newMeta, {
+      const metaData = {
+        descricao: newMeta.descricao,
+        valor_alvo: parseFloat(newMeta.valor_alvo),
+        valor_atual: parseFloat(newMeta.valor_atual),
+        data_limite: newMeta.data_limite,
+        categoria: newMeta.categoria,
+        recorrente: newMeta.recorrente
+      };
+      if (newMeta.recorrente) {
+        metaData.periodo_recorrencia = newMeta.periodo_recorrencia;
+      }
+      await axios.post('http://localhost:5000/api/metas', metaData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNewMeta({ descricao: '', valor_alvo: '', data_limite: '' });
+      setNewMeta({
+        descricao: '',
+        valor_alvo: '',
+        valor_atual: '',
+        data_limite: '',
+        categoria: '',
+        recorrente: false,
+        periodo_recorrencia: ''
+      });
       fetchMetas();
-      showAlert('success', 'Meta adicionada com sucesso');
+      showAlert('Meta adicionada com sucesso', 'success');
     } catch (error) {
       console.error('Erro ao adicionar meta:', error);
-      showAlert('danger', 'Erro ao adicionar meta');
+      showAlert('Falha ao adicionar meta', 'danger');
     }
   };
 
-  const checkGoalAchievement = async (meta) => {
-    if (meta.valor_atual >= meta.valor_alvo && !meta.concluida) {
+  const handleEdit = (meta) => {
+    setEditingId(meta._id);
+    setEditedMeta(meta);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditedMeta({ 
+      ...editedMeta, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const metaData = {
+        ...editedMeta,
+        valor_alvo: parseFloat(editedMeta.valor_alvo),
+        valor_atual: parseFloat(editedMeta.valor_atual)
+      };
+      if (!editedMeta.recorrente) {
+        delete metaData.periodo_recorrencia;
+      }
+      await axios.put(`http://localhost:5000/api/metas/${editingId}`, metaData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEditingId(null);
+      fetchMetas();
+      showAlert('Meta atualizada com sucesso', 'success');
+    } catch (error) {
+      console.error('Erro ao editar meta:', error);
+      showAlert('Falha ao atualizar meta', 'danger');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
       try {
         const token = localStorage.getItem('token');
-        await axios.put(`http://localhost:5000/api/metas/${meta.id}`, { ...meta, concluida: true }, {
+        await axios.delete(`http://localhost:5000/api/metas/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setCurrentReward(getRandomReward());
-        setShowRewardModal(true);
         fetchMetas();
+        showAlert('Meta excluída com sucesso', 'success');
       } catch (error) {
-        console.error('Erro ao atualizar meta:', error);
-        showAlert('danger', 'Erro ao atualizar meta');
+        console.error('Erro ao deletar meta:', error);
+        showAlert('Falha ao excluir meta', 'danger');
       }
     }
   };
 
-  const getRandomReward = () => {
-    const rewards = [
-      "Troféu de Conquistador",
-      "Medalha de Ouro",
-      "Emblema de Superação",
-      "Certificado de Excelência",
-      "Estrela de Realização"
-    ];
-    return rewards[Math.floor(Math.random() * rewards.length)];
+  const handleShowDetails = (meta) => {
+    setDetailsMeta(meta);
+    setShowDetailsModal(true);
   };
 
-  const suggestNewGoal = () => {
-    const suggestions = [
-      "Economizar 10% do salário mensalmente",
-      "Investir em um curso de aperfeiçoamento profissional",
-      "Criar um fundo para aposentadoria",
-      "Quitar todas as dívidas em 12 meses",
-      "Iniciar um negócio paralelo"
-    ];
-    setSuggestedGoal(suggestions[Math.floor(Math.random() * suggestions.length)]);
-    setShowSuggestionModal(true);
+  const showAlert = (message, variant) => {
+    setAlert({ show: true, message, variant });
+    setTimeout(() => setAlert({ show: false, message: '', variant: 'success' }), 3000);
   };
 
-  const handleDelete = async (id) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/metas/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchMetas();
-      showAlert('success', 'Meta deletada com sucesso');
-    } catch (error) {
-      console.error('Erro ao deletar meta:', error);
-      showAlert('danger', 'Erro ao deletar meta');
-    }
+  const filtrarMetas = () => {
+    return metas.filter(meta =>
+      meta.descricao.toLowerCase().includes(filtro.toLowerCase()) ||
+      meta.categoria.toLowerCase().includes(filtro.toLowerCase())
+    );
   };
 
-  const editarMeta = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/metas/${editingMeta.id}`, editingMeta, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setShowEditModal(false);
-      fetchMetas();
-      showAlert('success', 'Meta atualizada com sucesso');
-    } catch (error) {
-      console.error('Erro ao editar meta:', error);
-      showAlert('danger', 'Erro ao editar meta');
-    }
+  const ordenarMetas = (metasFiltradas) => {
+    return metasFiltradas.sort((a, b) => {
+      if (ordenacao === 'data_limite') {
+        return new Date(a.data_limite) - new Date(b.data_limite);
+      } else if (ordenacao === 'progresso') {
+        return (b.valor_atual / b.valor_alvo) - (a.valor_atual / a.valor_alvo);
+      } else if (ordenacao === 'valor_alvo') {
+        return b.valor_alvo - a.valor_alvo;
+      }
+      return 0;
+    });
   };
 
-  const showAlert = (variant, message) => {
-    setAlert({ show: true, variant, message });
-    setTimeout(() => setAlert({ show: false, variant: '', message: '' }), 3000);
-  };
-
-  const handleSort = (field) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const sortedMetas = [...metas].sort((a, b) => {
-    if (a[sortField] < b[sortField]) return sortDirection === 'asc' ? -1 : 1;
-    if (a[sortField] > b[sortField]) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  const filteredMetas = sortedMetas.filter(
-    (meta) =>
-      meta.descricao.toLowerCase().includes(filter.toLowerCase()) ||
-      meta.valor_alvo.toString().includes(filter)
-  );
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredMetas.slice(indexOfFirstItem, indexOfLastItem);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const metasFiltradas = ordenarMetas(filtrarMetas());
 
   const chartData = {
     labels: metas.map(meta => meta.descricao),
     datasets: [
       {
-        label: 'Progresso',
+        label: 'Progresso das Metas',
         data: metas.map(meta => (meta.valor_atual / meta.valor_alvo) * 100),
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
         borderColor: 'rgba(75, 192, 192, 1)',
         borderWidth: 1,
       },
@@ -216,36 +236,10 @@ const MetasPage = () => {
   };
 
   const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
     scales: {
       y: {
         beginAtZero: true,
         max: 100,
-        title: {
-          display: true,
-          text: 'Progresso (%)',
-        },
-        ticks: {
-          color: isDarkMode ? '#ffffff' : '#000000'
-        }
-      },
-      x: {
-        ticks: {
-          color: isDarkMode ? '#ffffff' : '#000000'
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        labels: {
-          color: isDarkMode ? '#ffffff' : '#000000'
-        }
-      },
-      title: {
-        display: true,
-        text: 'Progresso das Metas',
-        color: isDarkMode ? '#ffffff' : '#000000'
       },
     },
   };
@@ -254,20 +248,14 @@ const MetasPage = () => {
     <Layout>
       <StyledContainer>
         {alert.show && (
-          <Alert variant={alert.variant} onClose={() => setAlert({ show: false, variant: '', message: '' })} dismissible>
+          <Alert variant={alert.variant} onClose={() => setAlert({ ...alert, show: false })} dismissible>
             {alert.message}
           </Alert>
         )}
 
         <Row className="mb-4">
           <Col>
-            <h2>Metas Financeiras</h2>
-          </Col>
-          <Col xs="auto">
-            <Button variant="outline-primary" onClick={suggestNewGoal}>
-              <FontAwesomeIcon icon={faStar} className="mr-2" />
-              Sugerir Nova Meta
-            </Button>
+            <h2>Metas</h2>
           </Col>
         </Row>
 
@@ -278,7 +266,7 @@ const MetasPage = () => {
                 <Card.Title>Nova Meta</Card.Title>
                 <Form onSubmit={handleSubmit}>
                   <Row>
-                    <Col md={4}>
+                    <Col md={6}>
                       <Form.Group>
                         <Form.Label>Descrição</Form.Label>
                         <Form.Control
@@ -290,7 +278,7 @@ const MetasPage = () => {
                         />
                       </Form.Group>
                     </Col>
-                    <Col md={4}>
+                    <Col md={3}>
                       <Form.Group>
                         <Form.Label>Valor Alvo</Form.Label>
                         <Form.Control
@@ -302,6 +290,20 @@ const MetasPage = () => {
                         />
                       </Form.Group>
                     </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Valor Atual</Form.Label>
+                        <Form.Control
+                          type="number"
+                          name="valor_atual"
+                          value={newMeta.valor_atual}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  <Row>
                     <Col md={4}>
                       <Form.Group>
                         <Form.Label>Data Limite</Form.Label>
@@ -314,11 +316,57 @@ const MetasPage = () => {
                         />
                       </Form.Group>
                     </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label>Categoria</Form.Label>
+                        <Form.Control
+                          as="select"
+                          name="categoria"
+                          value={newMeta.categoria}
+                          onChange={handleInputChange}
+                          required
+                        >
+                          <option value="">Selecione uma categoria</option>
+                          <option value="financeira">Financeira</option>
+                          <option value="pessoal">Pessoal</option>
+                          <option value="profissional">Profissional</option>
+                        </Form.Control>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Check
+                          type="checkbox"
+                          label="Meta Recorrente"
+                          name="recorrente"
+                          checked={newMeta.recorrente}
+                          onChange={handleInputChange}
+                        />
+                      </Form.Group>
+                      {newMeta.recorrente && (
+                        <Form.Group>
+                          <Form.Label>Período de Recorrência</Form.Label>
+                          <Form.Control
+                            as="select"
+                            name="periodo_recorrencia"
+                            value={newMeta.periodo_recorrencia}
+                            onChange={handleInputChange}
+                            required
+                          >
+                            <option value="">Selecione um período</option>
+                            <option value="diaria">Diária</option>
+                            <option value="semanal">Semanal</option>
+                            <option value="mensal">Mensal</option>
+                            <option value="anual">Anual</option>
+                          </Form.Control>
+                        </Form.Group>
+                      )}
+                    </Col>
                   </Row>
-                  <Button variant="primary" type="submit" className="mt-3">
+                  <ResponsiveButton variant="primary" type="submit" className="mt-3">
                     <FontAwesomeIcon icon={faPlus} className="mr-2" />
                     Adicionar Meta
-                  </Button>
+                  </ResponsiveButton>
                 </Form>
               </Card.Body>
             </StyledCard>
@@ -326,15 +374,49 @@ const MetasPage = () => {
         </Row>
 
         <Row className="mb-4">
-          <Col>
+          <Col md={8}>
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
-                <Card.Title>Visão Geral de Metas</Card.Title>
-                <ChartContainer>
-                  <Bar data={chartData} options={chartOptions} />
-                </ChartContainer>
+                <Card.Title>Progresso Geral das Metas</Card.Title>
+                <Line data={chartData} options={chartOptions} />
               </Card.Body>
             </StyledCard>
+          </Col>
+          <Col md={4}>
+            <StyledCard isDarkMode={isDarkMode}>
+              <Card.Body>
+                <Card.Title>Estatísticas</Card.Title>
+                {estatisticas && (
+                  <>
+                    <p>Total de Metas: {estatisticas.totalMetas}</p>
+                    <p>Metas Concluídas: {estatisticas.metasConcluidas}</p>
+                    <p>Taxa de Conclusão: {estatisticas.taxaConclusao.toFixed(2)}%</p>
+                  </>
+                )}
+              </Card.Body>
+            </StyledCard>
+          </Col>
+        </Row>
+
+        <Row className="mb-3">
+          <Col md={6}>
+            <Form.Control
+              type="text"
+              placeholder="Filtrar metas..."
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+            />
+          </Col>
+          <Col md={6}>           
+                          <Form.Control
+              as="select"
+              value={ordenacao}
+              onChange={(e) => setOrdenacao(e.target.value)}
+            >
+              <option value="data_limite">Ordenar por Data Limite</option>
+              <option value="progresso">Ordenar por Progresso</option>
+              <option value="valor_alvo">Ordenar por Valor Alvo</option>
+            </Form.Control>
           </Col>
         </Row>
 
@@ -343,75 +425,58 @@ const MetasPage = () => {
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Lista de Metas</Card.Title>
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Control
-                      type="text"
-                      placeholder="Filtrar metas..."
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                    />
-                  </Col>
-                  <Col md={6} className="text-right">
-                    <CSVLink
-                      data={metas}
-                      filename={"metas.csv"}
-                      className="btn btn-primary"
-                    >
-                      <FontAwesomeIcon icon={faFileExport} className="mr-2" />
-                      Exportar CSV
-                    </CSVLink>
-                  </Col>
-                </Row>
-                <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'} isDarkMode={isDarkMode}>
+                <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'}>
                   <thead>
                     <tr>
-                      <th onClick={() => handleSort('descricao')}>Descrição</th>
-                      <th onClick={() => handleSort('valor_alvo')}>Valor Alvo</th>
+                      <th>Descrição</th>
+                      <th>Valor Alvo</th>
+                      <th>Valor Atual</th>
+                      <th>Data Limite</th>
+                      <th>Categoria</th>
+                      <th>Recorrente</th>
                       <th>Progresso</th>
-                      <th onClick={() => handleSort('data_limite')}>Data Limite</th>
-                      <th>Status</th>
                       <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentItems.map((meta) => (
-                      <tr key={meta.id}>
+                    {metasFiltradas.map((meta) => (
+                      <tr key={meta._id}>
                         <td>{meta.descricao}</td>
                         <td>R$ {meta.valor_alvo.toFixed(2)}</td>
+                        <td>R$ {meta.valor_atual.toFixed(2)}</td>
+                        <td>{new Date(meta.data_limite).toLocaleDateString()}</td>
+                        <td>{meta.categoria}</td>
+                        <td>{meta.recorrente ? 'Sim' : 'Não'}</td>
                         <td>
-                          <ProgressBar 
-                            now={(meta.valor_atual / meta.valor_alvo) * 100} 
-                            label={`${((meta.valor_atual / meta.valor_alvo) * 100).toFixed(0)}%`}
+                          <ProgressBar
+                            now={(meta.valor_atual / meta.valor_alvo) * 100}
+                            label={`${((meta.valor_atual / meta.valor_alvo) * 100).toFixed(2)}%`}
                           />
                         </td>
-                        <td>{meta.data_limite}</td>
                         <td>
-                          {meta.concluida ? (
-                            <Badge variant="success">Concluída</Badge>
-                          ) : (
-                            <Badge variant="warning">Em andamento</Badge>
-                          )}
-                        </td>
-                        <td>
-                          <Button 
-                            variant="outline-primary" 
-                            size="sm" 
+                          <ResponsiveButton
+                            variant="outline-primary"
+                            size="sm"
                             className="mr-2"
-                            onClick={() => {
-                              setEditingMeta(meta);
-                              setShowEditModal(true);
-                            }}
+                            onClick={() => handleEdit(meta)}
                           >
                             <FontAwesomeIcon icon={faEdit} />
-                          </Button>
-                          <Button 
-                            variant="outline-danger" 
-                            size="sm" 
-                            onClick={() => handleDelete(meta.id)}
+                          </ResponsiveButton>
+                          <ResponsiveButton
+                            variant="outline-danger"
+                            size="sm"
+                            className="mr-2"
+                            onClick={() => handleDelete(meta._id)}
                           >
                             <FontAwesomeIcon icon={faTrash} />
-                          </Button>
+                          </ResponsiveButton>
+                          <ResponsiveButton
+                            variant="outline-info"
+                            size="sm"
+                            onClick={() => handleShowDetails(meta)}
+                          >
+                            <FontAwesomeIcon icon={faEye} />
+                          </ResponsiveButton>
                         </td>
                       </tr>
                     ))}
@@ -422,85 +487,32 @@ const MetasPage = () => {
           </Col>
         </Row>
 
-        <Modal show={showRewardModal} onHide={() => setShowRewardModal(false)} centered>
+        <StyledModal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} isDarkMode={isDarkMode}>
           <Modal.Header closeButton>
-            <Modal.Title>Parabéns! Meta Alcançada!</Modal.Title>
+            <Modal.Title>Detalhes da Meta</Modal.Title>
           </Modal.Header>
-          <Modal.Body className="text-center">
-            <FontAwesomeIcon icon={faTrophy} size="4x" className="text-warning mb-3" />
-            <h4>Você ganhou um(a):</h4>
-            <h3 className="text-primary">{currentReward}</h3>
-            <p>Continue assim e alcance todas as suas metas!</p>
+          <Modal.Body>
+            {detailsMeta && (
+              <>
+                <p><strong>Descrição:</strong> {detailsMeta.descricao}</p>
+                <p><strong>Valor Alvo:</strong> R$ {detailsMeta.valor_alvo.toFixed(2)}</p>
+                <p><strong>Valor Atual:</strong> R$ {detailsMeta.valor_atual.toFixed(2)}</p>
+                <p><strong>Data Limite:</strong> {new Date(detailsMeta.data_limite).toLocaleDateString()}</p>
+                <p><strong>Categoria:</strong> {detailsMeta.categoria}</p>
+                <p><strong>Recorrente:</strong> {detailsMeta.recorrente ? 'Sim' : 'Não'}</p>
+                {detailsMeta.recorrente && (
+                  <p><strong>Período de Recorrência:</strong> {detailsMeta.periodo_recorrencia}</p>
+                )}
+                <p><strong>Progresso:</strong> {((detailsMeta.valor_atual / detailsMeta.valor_alvo) * 100).toFixed(2)}%</p>
+              </>
+            )}
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="primary" onClick={() => setShowRewardModal(false)}>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
               Fechar
             </Button>
           </Modal.Footer>
-        </Modal>
-
-        <Modal show={showSuggestionModal} onHide={() => setShowSuggestionModal(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>Sugestão de Nova Meta</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p>Baseado no seu perfil, que tal tentar esta nova meta?</p>
-            <h4 className="text-primary">{suggestedGoal}</h4>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowSuggestionModal(false)}>
-              Ignorar
-            </Button>
-            <Button variant="primary" onClick={() => {
-              setNewMeta({...newMeta, descricao: suggestedGoal});
-              setShowSuggestionModal(false);
-            }}>
-              Adicionar Meta
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Editar Meta</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form>
-              <Form.Group>
-                <Form.Label>Descrição</Form.Label>
-                <Form.Control 
-                  type="text" 
-                  value={editingMeta?.descricao || ''}
-                  onChange={(e) => setEditingMeta({...editingMeta, descricao: e.target.value})}
-                />
-              </Form.Group>
-              <Form.Group>
-                <Form.Label>Valor Alvo</Form.Label>
-                <Form.Control 
-                  type="number" 
-                  value={editingMeta?.valor_alvo || ''}
-                  onChange={(e) => setEditingMeta({...editingMeta, valor_alvo: e.target.value})}
-                />
-              </Form.Group>
-              <Form.Group>
-                <Form.Label>Data Limite</Form.Label>
-                <Form.Control 
-                  type="date" 
-                  value={editingMeta?.data_limite || ''}
-                  onChange={(e) => setEditingMeta({...editingMeta, data_limite: e.target.value})}
-                />
-              </Form.Group>
-            </Form>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
-              Cancelar
-            </Button>
-            <Button variant="primary" onClick={editarMeta}>
-              Salvar Alterações
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        </StyledModal>
       </StyledContainer>
     </Layout>
   );

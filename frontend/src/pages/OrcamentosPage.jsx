@@ -8,14 +8,16 @@ import {
   Form,
   Table,
   Alert,
+  Modal,
 } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
   faEdit,
   faTrash,
-  faSearch,
   faCheck,
+  faTimes,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import styled from "styled-components";
 import {
@@ -42,6 +44,10 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+const StyledContainer = styled(Container)`
+  padding: 20px;
+`;
 
 const StyledCard = styled(Card)`
   border: none;
@@ -76,6 +82,26 @@ const ResponsiveButton = styled(Button)`
   @media (max-width: 768px) {
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
+    margin: 0.2rem;
+  }
+`;
+
+const ResponsiveCol = styled(Col)`
+  @media (max-width: 768px) {
+    margin-bottom: 1rem;
+  }
+`;
+
+const ResponsiveForm = styled(Form)`
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
+`;
+
+const StyledModal = styled(Modal)`
+  .modal-content {
+    background-color: ${(props) => (props.isDarkMode ? "#2c2c2c" : "#ffffff")};
+    color: ${(props) => (props.isDarkMode ? "#ffffff" : "#000000")};
   }
 `;
 
@@ -84,7 +110,7 @@ const OrcamentosPage = () => {
   const [orcamentos, setOrcamentos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [newOrcamento, setNewOrcamento] = useState({
-    categoria_id: "",
+    categoria: "",
     valor_planejado: "",
     mes: new Date().getMonth() + 1,
     ano: new Date().getFullYear(),
@@ -92,6 +118,8 @@ const OrcamentosPage = () => {
   const [alerts, setAlerts] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editedOrcamento, setEditedOrcamento] = useState({});
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsOrcamento, setDetailsOrcamento] = useState(null);
 
   useEffect(() => {
     fetchOrcamentos();
@@ -138,7 +166,7 @@ const OrcamentosPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNewOrcamento({
-        categoria_id: "",
+        categoria: "",
         valor_planejado: "",
         mes: new Date().getMonth() + 1,
         ano: new Date().getFullYear(),
@@ -150,12 +178,13 @@ const OrcamentosPage = () => {
   };
 
   const handleEdit = (orcamento) => {
-    setEditingId(orcamento.id);
+    setEditingId(orcamento._id);
     setEditedOrcamento(orcamento);
   };
 
-  const handleEditChange = (e, field) => {
-    setEditedOrcamento({ ...editedOrcamento, [field]: e.target.value });
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditedOrcamento({ ...editedOrcamento, [name]: value });
   };
 
   const handleSaveEdit = async () => {
@@ -189,25 +218,25 @@ const OrcamentosPage = () => {
     }
   };
 
+  const handleShowDetails = (orcamento) => {
+    setDetailsOrcamento(orcamento);
+    setShowDetailsModal(true);
+  };
+
   useEffect(() => {
     const newAlerts = orcamentos
       .filter((orcamento) => orcamento.valor_atual > orcamento.valor_planejado)
       .map(
         (orcamento) =>
-          `${
-            categorias.find((cat) => cat.id === orcamento.categoria_id)?.nome
-          }: Ultrapassou o limite em R$ ${(
+          `${orcamento.categoria.nome}: Ultrapassou o limite em R$ ${(
             orcamento.valor_atual - orcamento.valor_planejado
           ).toFixed(2)}`
       );
     setAlerts(newAlerts);
-  }, [orcamentos, categorias]);
+  }, [orcamentos]);
 
   const chartData = {
-    labels: orcamentos.map(
-      (orcamento) =>
-        categorias.find((cat) => cat.id === orcamento.categoria_id)?.nome
-    ),
+    labels: orcamentos.map((orcamento) => orcamento.categoria.nome),
     datasets: [
       {
         label: "Planejado",
@@ -255,10 +284,10 @@ const OrcamentosPage = () => {
 
   return (
     <Layout>
-      <Container fluid>
+      <StyledContainer fluid>
         <Row className="mb-4">
           <Col>
-            <h2 className="responsive-heading">Orçamentos</h2>
+            <h2>Orçamentos</h2>
           </Col>
         </Row>
 
@@ -284,29 +313,29 @@ const OrcamentosPage = () => {
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Novo Orçamento</Card.Title>
-                <Form onSubmit={handleSubmit}>
+                <ResponsiveForm onSubmit={handleSubmit}>
                   <Row>
-                    <Col md={6} lg={3}>
-                      <Form.Group className="mb-3">
+                    <ResponsiveCol xs={12} md={3}>
+                      <Form.Group>
                         <Form.Label>Categoria</Form.Label>
                         <Form.Control
                           as="select"
-                          name="categoria_id"
-                          value={newOrcamento.categoria_id}
+                          name="categoria"
+                          value={newOrcamento.categoria}
                           onChange={handleInputChange}
                           required
                         >
                           <option value="">Selecione uma categoria</option>
                           {categorias.map((categoria) => (
-                            <option key={categoria.id} value={categoria.id}>
+                            <option key={categoria._id} value={categoria._id}>
                               {categoria.nome}
                             </option>
                           ))}
                         </Form.Control>
                       </Form.Group>
-                    </Col>
-                    <Col md={6} lg={3}>
-                      <Form.Group className="mb-3">
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={3}>
+                      <Form.Group>
                         <Form.Label>Valor Planejado</Form.Label>
                         <Form.Control
                           type="number"
@@ -316,9 +345,9 @@ const OrcamentosPage = () => {
                           required
                         />
                       </Form.Group>
-                    </Col>
-                    <Col md={6} lg={3}>
-                      <Form.Group className="mb-3">
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={3}>
+                      <Form.Group>
                         <Form.Label>Mês</Form.Label>
                         <Form.Control
                           type="number"
@@ -330,9 +359,9 @@ const OrcamentosPage = () => {
                           required
                         />
                       </Form.Group>
-                    </Col>
-                    <Col md={6} lg={3}>
-                      <Form.Group className="mb-3">
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={3}>
+                      <Form.Group>
                         <Form.Label>Ano</Form.Label>
                         <Form.Control
                           type="number"
@@ -342,7 +371,7 @@ const OrcamentosPage = () => {
                           required
                         />
                       </Form.Group>
-                    </Col>
+                    </ResponsiveCol>
                   </Row>
                   <ResponsiveButton
                     variant="primary"
@@ -352,7 +381,7 @@ const OrcamentosPage = () => {
                     <FontAwesomeIcon icon={faPlus} className="mr-2" />
                     Adicionar Orçamento
                   </ResponsiveButton>
-                </Form>
+                </ResponsiveForm>
               </Card.Body>
             </StyledCard>
           </Col>
@@ -381,7 +410,6 @@ const OrcamentosPage = () => {
                     striped
                     hover
                     variant={isDarkMode ? "dark" : "light"}
-                    isDarkMode={isDarkMode}
                   >
                     <thead>
                       <tr>
@@ -395,39 +423,35 @@ const OrcamentosPage = () => {
                     </thead>
                     <tbody>
                       {orcamentos.map((orcamento) => (
-                        <tr key={orcamento.id}>
+                        <tr key={orcamento._id}>
                           <td>
-                            {editingId === orcamento.id ? (
+                            {editingId === orcamento._id ? (
                               <Form.Control
                                 as="select"
-                                value={editedOrcamento.categoria_id}
-                                onChange={(e) =>
-                                  handleEditChange(e, "categoria_id")
-                                }
+                                name="categoria"
+                                value={editedOrcamento.categoria}
+                                onChange={handleEditChange}
                               >
                                 {categorias.map((categoria) => (
                                   <option
-                                    key={categoria.id}
-                                    value={categoria.id}
+                                    key={categoria._id}
+                                    value={categoria._id}
                                   >
                                     {categoria.nome}
                                   </option>
                                 ))}
                               </Form.Control>
                             ) : (
-                              categorias.find(
-                                (cat) => cat.id === orcamento.categoria_id
-                              )?.nome
+                              orcamento.categoria.nome
                             )}
                           </td>
                           <td>
-                            {editingId === orcamento.id ? (
+                            {editingId === orcamento._id ? (
                               <Form.Control
                                 type="number"
+                                name="valor_planejado"
                                 value={editedOrcamento.valor_planejado}
-                                onChange={(e) =>
-                                  handleEditChange(e, "valor_planejado")
-                                }
+                                onChange={handleEditChange}
                               />
                             ) : (
                               `R$ ${orcamento.valor_planejado.toFixed(2)}`
@@ -475,30 +499,49 @@ const OrcamentosPage = () => {
                             </div>
                           </td>
                           <td>
-                            {editingId === orcamento.id ? (
-                              <ResponsiveButton
-                                variant="success"
-                                size="sm"
-                                onClick={handleSaveEdit}
-                              >
-                                <FontAwesomeIcon icon={faCheck} />
-                              </ResponsiveButton>
+                            {editingId === orcamento._id ? (
+                              <>
+                                <ResponsiveButton
+                                  variant="success"
+                                  size="sm"
+                                  onClick={handleSaveEdit}
+                                >
+                                  <FontAwesomeIcon icon={faCheck} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setEditingId(null)}
+                                  className="ml-2"
+                                >
+                                  <FontAwesomeIcon icon={faTimes} />
+                                </ResponsiveButton>
+                              </>
                             ) : (
-                              <ResponsiveButton
-                                variant="outline-primary"
-                                size="sm"
-                                onClick={() => handleEdit(orcamento)}
-                              >
-                                <FontAwesomeIcon icon={faEdit} />
-                              </ResponsiveButton>
+                              <>
+                                <ResponsiveButton
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => handleEdit(orcamento)}
+                                >
+                                  <FontAwesomeIcon icon={faEdit} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleDelete(orcamento._id)}
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="outline-info"
+                                  size="sm"
+                                  onClick={() => handleShowDetails(orcamento)}
+                                >
+                                  <FontAwesomeIcon icon={faEye} />
+                                </ResponsiveButton>
+                              </>
                             )}
-                            <ResponsiveButton
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={() => handleDelete(orcamento.id)}
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                            </ResponsiveButton>
                           </td>
                         </tr>
                       ))}
@@ -509,7 +552,48 @@ const OrcamentosPage = () => {
             </StyledCard>
           </Col>
         </Row>
-      </Container>
+
+        <StyledModal
+          show={showDetailsModal}
+          onHide={() => setShowDetailsModal(false)}
+          isDarkMode={isDarkMode}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Detalhes do Orçamento</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {detailsOrcamento && (
+              <>
+                <p>
+                  <strong>Categoria:</strong> {detailsOrcamento.categoria.nome}
+                </p>
+                <p>
+                  <strong>Valor Planejado:</strong> R${" "}
+                  {detailsOrcamento.valor_planejado.toFixed(2)}
+                </p>
+                <p>
+                  <strong>Valor Atual:</strong> R${" "}
+                  {detailsOrcamento.valor_atual.toFixed(2)}
+                </p>
+                <p>
+                  <strong>Mês:</strong> {detailsOrcamento.mes}
+                </p>
+                <p>
+                  <strong>Ano:</strong> {detailsOrcamento.ano}
+                </p>
+                <p>
+                  <strong>ID:</strong> {detailsOrcamento._id}
+                </p>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+              Fechar
+            </Button>
+          </Modal.Footer>
+        </StyledModal>
+      </StyledContainer>
     </Layout>
   );
 };

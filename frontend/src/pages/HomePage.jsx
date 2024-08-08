@@ -1,297 +1,420 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Table, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Table, Modal, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faUser,
-  faSignOutAlt,
-  faCog,
-} from '@fortawesome/free-solid-svg-icons';
+import { faWallet, faChartLine, faExchangeAlt, faMoneyBillWave, faFileAlt, faSync } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
-import { Line, Pie, Doughnut } from 'react-chartjs-2';
-import Layout from '../layout/Layout';
-import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../layout/Layout';
+import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
+import { Line, Doughnut } from 'react-chartjs-2';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+const StyledContainer = styled(Container)`
+  padding: 20px;
+`;
 
 const StyledCard = styled(Card)`
   border: none;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  background-color: ${props => props.isDarkMode ? '#1e1e1e' : '#fff'};
-  color: ${props => props.isDarkMode ? '#fff' : '#333'};
-  border: ${props => props.isDarkMode ? '1px solid #333' : 'none'};
+  background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  margin-bottom: 30px;
+`;
 
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  }
+const IconWrapper = styled.div`
+  font-size: 2rem;
+  margin-bottom: 15px;
 `;
 
 const ChartContainer = styled.div`
   height: 300px;
-  width: 100%;
+  margin-bottom: 30px;
+`;
+
+const StyledDatePicker = styled(DatePicker)`
+  margin-right: 15px;
+`;
+
+const StyledButton = styled(Button)`
+  margin-right: 15px;
+`;
+
+const StyledTable = styled(Table)`
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  background-color: ${props => props.isDarkMode ? '#1e1e1e' : '#ffffff'};
+
+  th, td {
+    border-color: ${props => props.isDarkMode ? '#444' : '#dee2e6'};
+    padding: 12px;
+    background-color: ${props => props.isDarkMode ? '#1e1e1e' : '#ffffff'};
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
+
+  tbody tr:nth-of-type(odd) {
+    background-color: ${props => props.isDarkMode ? '#2a2a2a' : '#f8f9fa'};
+  }
+
+  tbody tr:hover {
+    background-color: ${props => props.isDarkMode ? '#3a3a3a' : '#e9ecef'};
+  }
+
+  .text-success {
+    color: ${props => props.isDarkMode ? '#4caf50' : '#28a745'} !important;
+  }
+
+  .text-danger {
+    color: ${props => props.isDarkMode ? '#f44336' : '#dc3545'} !important;
+  }
+`;
+
+const StyledRow = styled(Row)`
+  margin-bottom: 30px;
+`;
+
+const StyledCol = styled(Col)`
+  margin-bottom: 20px;
+`;
+
+const StyledModal = styled(Modal)`
+  .modal-content {
+    background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
+
+  .modal-header {
+    border-bottom-color: ${props => props.isDarkMode ? '#444' : '#dee2e6'};
+  }
+
+  .modal-footer {
+    border-top-color: ${props => props.isDarkMode ? '#444' : '#dee2e6'};
+  }
+
+  .close {
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
 `;
 
 const HomePage = () => {
-  const [userName, setUserName] = useState('');
   const { isDarkMode } = useTheme();
+  const [resumo, setResumo] = useState({
+    saldoTotal: 0,
+    receitasMes: 0,
+    despesasMes: 0,
+    transacoesRecentes: []
+  });
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1));
+  const [endDate, setEndDate] = useState(new Date());
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportData, setReportData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      try {
-        const response = await axios.get('http://localhost:5000/api/usuarios/profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUserName(response.data.nome);
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
-    };
-
-    fetchUserData();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    }
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const [resumoResponse, reportResponse] = await Promise.all([
+        axios.get('http://localhost:5000/api/resumo', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
+        }),
+        axios.get('http://localhost:5000/api/relatorios/completo', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
+        })
+      ]);
+      setResumo(resumoResponse.data);
+      setReportData(reportResponse.data);
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const financialData = {
-    saldoAtual: 5000,
-    despesasMes: 2500,
-    receitasMes: 4000,
-    investimentos: 10000,
-    metas: [
-      { nome: 'Férias', valor: 5000, progresso: 60 },
-      { nome: 'Novo Carro', valor: 30000, progresso: 25 },
-    ],
-    ultimasTransacoes: [
-      { data: '2023-09-01', descricao: 'Salário', valor: 4000, tipo: 'receita' },
-      { data: '2023-09-02', descricao: 'Aluguel', valor: -1500, tipo: 'despesa' },
-      { data: '2023-09-03', descricao: 'Supermercado', valor: -300, tipo: 'despesa' },
-    ],
+  const renderResumoFinanceiro = () => {
+    const { saldoTotal, receitasMes, despesasMes } = resumo;
+    return (
+      <StyledCard isDarkMode={isDarkMode}>
+        <Card.Body>
+          <Card.Title>Resumo Financeiro</Card.Title>
+          <StyledRow>
+            <StyledCol md={3}>
+              <IconWrapper>
+                <FontAwesomeIcon icon={faWallet} />
+              </IconWrapper>
+              <h5>Saldo Total</h5>
+              <p className={saldoTotal >= 0 ? "text-success" : "text-danger"}>
+                R$ {saldoTotal.toFixed(2)}
+              </p>
+            </StyledCol>
+            <StyledCol md={3}>
+              <IconWrapper>
+                <FontAwesomeIcon icon={faChartLine} />
+              </IconWrapper>
+              <h5>Receitas do Período</h5>
+              <p className="text-success">R$ {receitasMes.toFixed(2)}</p>
+            </StyledCol>
+            <StyledCol md={3}>
+              <IconWrapper>
+                <FontAwesomeIcon icon={faExchangeAlt} />
+              </IconWrapper>
+              <h5>Despesas do Período</h5>
+              <p className="text-danger">R$ {despesasMes.toFixed(2)}</p>
+            </StyledCol>
+            <StyledCol md={3}>
+              <IconWrapper>
+                <FontAwesomeIcon icon={faMoneyBillWave} />
+              </IconWrapper>
+              <h5>Saldo do Período</h5>
+              <p className={receitasMes - despesasMes >= 0 ? "text-success" : "text-danger"}>
+                R$ {(receitasMes - despesasMes).toFixed(2)}
+              </p>
+            </StyledCol>
+          </StyledRow>
+        </Card.Body>
+      </StyledCard>
+    );
   };
 
-  const despesasPorCategoria = {
-    labels: ['Moradia', 'Alimentação', 'Transporte', 'Lazer', 'Saúde'],
-    datasets: [{
-      data: [1500, 500, 300, 200, 100],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.6)',
-        'rgba(54, 162, 235, 0.6)',
-        'rgba(255, 206, 86, 0.6)',
-        'rgba(75, 192, 192, 0.6)',
-        'rgba(153, 102, 255, 0.6)',
-      ],
-    }]
+  const renderGraficos = () => {
+    const emptyData = {
+      labels: [],
+      datasets: [{ data: [] }]
+    };
+
+    const fluxoCaixaData = reportData ? {
+      labels: reportData.fluxoCaixa.map(item => item.mes),
+      datasets: [
+        {
+          label: 'Receitas',
+          data: reportData.fluxoCaixa.map(item => item.receitas),
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        },
+        {
+          label: 'Despesas',
+          data: reportData.fluxoCaixa.map(item => item.despesas),
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        }
+      ]
+    } : emptyData;
+
+    const categoriasData = reportData ? {
+      labels: reportData.transacoesPorCategoria.map(item => item.categoria),
+      datasets: [{
+        data: reportData.transacoesPorCategoria.map(item => item.total),
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(255, 206, 86, 0.6)',
+          'rgba(75, 192, 192, 0.6)',
+          'rgba(153, 102, 255, 0.6)',
+        ],
+      }]
+    } : emptyData;
+
+    return (
+      <StyledRow>
+        <StyledCol md={6}>
+          <StyledCard isDarkMode={isDarkMode}>
+            <Card.Body>
+              <Card.Title>Fluxo de Caixa</Card.Title>
+              <ChartContainer>
+                <Line data={fluxoCaixaData} options={{ responsive: true, maintainAspectRatio: false }} />
+              </ChartContainer>
+            </Card.Body>
+          </StyledCard>
+        </StyledCol>
+        <StyledCol md={6}>
+          <StyledCard isDarkMode={isDarkMode}>
+            <Card.Body>
+              <Card.Title>Transações por Categoria</Card.Title>
+              <ChartContainer>
+                <Doughnut data={categoriasData} options={{ responsive: true, maintainAspectRatio: false }} />
+              </ChartContainer>
+            </Card.Body>
+          </StyledCard>
+        </StyledCol>
+      </StyledRow>
+    );
   };
 
-  const fluxoCaixa = {
-    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
-    datasets: [
-      {
-        label: 'Receitas',
-        data: [4000, 3900, 4100, 4000, 4200, 4000],
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-      },
-      {
-        label: 'Despesas',
-        data: [2500, 2600, 2400, 2800, 2700, 2500],
-        borderColor: 'rgb(255, 99, 132)',
-        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-      }
-    ]
+  const renderTransacoesRecentes = () => {
+    return (
+      <StyledCard isDarkMode={isDarkMode}>
+        <Card.Body>
+          <Card.Title>Transações Recentes</Card.Title>
+          <StyledTable striped bordered hover responsive isDarkMode={isDarkMode}>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Valor</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumo.transacoesRecentes.length > 0 ? (
+                resumo.transacoesRecentes.map((transacao, index) => (
+                  <tr key={index}>
+                    <td>{new Date(transacao.data).toLocaleDateString()}</td>
+                    <td>{transacao.descricao}</td>
+                    <td className={transacao.tipo === 'receita' ? 'text-success' : 'text-danger'}>
+                      R$ {transacao.valor.toFixed(2)}
+                    </td>
+                    <td>{transacao.tipo}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="text-center">Nenhuma transação recente</td>
+                </tr>
+              )}
+            </tbody>
+          </StyledTable>
+        </Card.Body>
+      </StyledCard>
+    );
+  };
+
+  const renderReportModal = () => {
+    return (
+      <StyledModal 
+        show={showReportModal} 
+        onHide={() => setShowReportModal(false)} 
+        size="lg"
+        isDarkMode={isDarkMode}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Relatório Financeiro Completo</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {reportData ? (
+            <>
+              <h5>Resumo Financeiro</h5>
+              <p>Receita Total: R$ {reportData.resumoFinanceiro.receita_total.toFixed(2)}</p>
+              <p>Despesa Total: R$ {reportData.resumoFinanceiro.despesa_total.toFixed(2)}</p>
+              <p>Saldo Total: R$ {reportData.resumoFinanceiro.saldo_total.toFixed(2)}</p>
+
+              <h5>Progresso das Metas</h5>
+              <StyledTable striped bordered hover isDarkMode={isDarkMode}>
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Valor Atual</th>
+                    <th>Valor Alvo</th>
+                    <th>Progresso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.progressoMetas.map((meta, index) => (
+                    <tr key={index}>
+                      <td>{meta.descricao}</td>
+                      <td>R$ {meta.valor_atual.toFixed(2)}</td>
+                      <td>R$ {meta.valor_alvo.toFixed(2)}</td>
+                      <td>{((meta.valor_atual / meta.valor_alvo) * 100).toFixed(2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </StyledTable>
+
+              <h5>Desempenho dos Orçamentos</h5>
+              <StyledTable striped bordered hover isDarkMode={isDarkMode}>
+                <thead>
+                  <tr>
+                    <th>Categoria</th>
+                    <th>Valor Planejado</th>
+                    <th>Valor Atual</th>
+                    <th>Diferença</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.desempenhoOrcamentos.map((orcamento, index) => (
+                    <tr key={index}>
+                      <td>{orcamento.categoria}</td>
+                      <td>R$ {orcamento.valor_planejado.toFixed(2)}</td>
+                      <td>R$ {orcamento.valor_atual.toFixed(2)}</td>
+                      <td className={orcamento.valor_atual <= orcamento.valor_planejado ? 'text-success' : 'text-danger'}>
+                        R$ {(orcamento.valor_planejado - orcamento.valor_atual).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </StyledTable>
+            </>
+          ) : (
+            <p>Carregando dados do relatório...</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant={isDarkMode ? "light" : "secondary"} onClick={() => setShowReportModal(false)}>
+            Fechar
+          </Button>
+        </Modal.Footer>
+      </StyledModal>
+    );
   };
 
   return (
     <Layout>
-      <Container fluid>
-        <Row className="mb-4">
+      <StyledContainer>
+        <StyledRow className="mb-4">
           <Col>
-            <h2>Bem-vindo, {userName}!</h2>
+            <h2>Dashboard</h2>
           </Col>
           <Col xs="auto">
-            <Button variant="outline-danger" onClick={handleLogout}>
-              <FontAwesomeIcon icon={faSignOutAlt} /> Logout
-            </Button>
+            <Form inline>
+              <StyledDatePicker
+                selected={startDate}
+                onChange={date => setStartDate(date)}
+                selectsStart
+                startDate={startDate}
+                endDate={endDate}
+                className="form-control"
+              />
+              <StyledDatePicker
+                selected={endDate}
+                onChange={date => setEndDate(date)}
+                selectsEnd
+                startDate={startDate}
+                endDate={endDate}
+                minDate={startDate}
+                className="form-control"
+              />
+              <StyledButton variant="primary" onClick={fetchData} disabled={isLoading}>
+                {isLoading ? (
+                  <Spinner animation="border" size="sm" />
+                ) : (
+                  <><FontAwesomeIcon icon={faSync} className="mr-2" /> Atualizar Dados</>
+                )}
+              </StyledButton>
+              <StyledButton variant="secondary" onClick={() => setShowReportModal(true)}>
+                <FontAwesomeIcon icon={faFileAlt} className="mr-2" />
+                Ver Relatório Completo
+              </StyledButton>
+            </Form>
           </Col>
-        </Row>
+        </StyledRow>
 
-        <Row>
-          <Col md={4} className="mb-4">
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Saldo Atual</Card.Title>
-                <h3 className="text-primary">R$ {financialData.saldoAtual.toFixed(2)}</h3>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-          <Col md={4} className="mb-4">
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Despesas do Mês</Card.Title>
-                <h3 className="text-danger">R$ {financialData.despesasMes.toFixed(2)}</h3>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-        </Row>
-
-        <Row>
-          <Col md={6} className="mb-4">
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Investimentos</Card.Title>
-                <ChartContainer>
-                  <Doughnut 
-                    data={{
-                      labels: ['Ações', 'Fundos Imobiliários', 'Tesouro Direto'],
-                      datasets: [{
-                        data: [5000, 3000, 2000],
-                        backgroundColor: [
-                          'rgba(255, 99, 132, 0.6)',
-                          'rgba(54, 162, 235, 0.6)',
-                          'rgba(255, 206, 86, 0.6)',
-                        ],
-                      }]
-                    }} 
-                    options={{ 
-                      responsive: true, 
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          labels: {
-                            color: isDarkMode ? '#fff' : '#333'
-                          }
-                        }
-                      }
-                    }}
-                  />
-                </ChartContainer>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-          <Col md={6} className="mb-4">
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Metas Financeiras</Card.Title>
-                {financialData.metas.map((meta, index) => (
-                  <div key={index} className="mb-3">
-                    <h6>{meta.nome}</h6>
-                    <ProgressBar now={meta.progresso} label={`${meta.progresso}%`} />
-                    <small>Meta: R$ {meta.valor.toFixed(2)}</small>
-                  </div>
-                ))}
-              </Card.Body>
-            </StyledCard>
-          </Col>
-        </Row>
-
-        <Row>
-          <Col>
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Últimas Transações</Card.Title>
-                <Table striped bordered hover variant={isDarkMode ? 'dark' : 'light'}>
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Descrição</th>
-                      <th>Valor</th>
-                      <th>Tipo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financialData.ultimasTransacoes.map((transacao, index) => (
-                      <tr key={index}>
-                        <td>{transacao.data}</td>
-                        <td>{transacao.descricao}</td>
-                        <td className={transacao.tipo === 'receita' ? 'text-success' : 'text-danger'}>
-                          R$ {Math.abs(transacao.valor).toFixed(2)}
-                        </td>
-                        <td>{transacao.tipo}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col md={6} className="mb-4">
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Despesas por Categoria</Card.Title>
-                <ChartContainer>
-                  <Pie 
-                    data={despesasPorCategoria} 
-                    options={{ 
-                      responsive: true, 
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          labels: {
-                            color: isDarkMode ? '#fff' : '#333'
-                          }
-                        }
-                      }
-                    }} 
-                  />
-                </ChartContainer>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-          <Col md={6} className="mb-4">
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Fluxo de Caixa</Card.Title>
-                <ChartContainer>
-                  <Line 
-                    data={fluxoCaixa} 
-                    options={{ 
-                      responsive: true, 
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          labels: {
-                            color: isDarkMode ? '#fff' : '#333'
-                          }
-                        }
-                      },
-                      scales: {
-                        x: {
-                          ticks: {
-                            color: isDarkMode ? '#fff' : '#333'
-                          }
-                        },
-                        y: {
-                          ticks: {
-                            color: isDarkMode ? '#fff' : '#333'
-                          }
-                        }
-                      }
-                    }} 
-                  />
-                </ChartContainer>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-        </Row>
-      </Container>
+        {renderResumoFinanceiro()}
+        {renderGraficos()}
+        {renderTransacoesRecentes()}
+        {renderReportModal()}
+      </StyledContainer>
     </Layout>
   );
 };
 
 export default HomePage;
-

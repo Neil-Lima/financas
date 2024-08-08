@@ -1,21 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Form, Table, Modal, Pagination, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Table, Modal, Alert } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faPlus,
-  faEdit,
-  faTrash,
-  faFileExport
-} from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
-import { Line, Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
 import axios from 'axios';
 import { useTheme } from '../context/ThemeContext';
-import { CSVLink } from 'react-csv';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
+ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const StyledContainer = styled(Container)`
   padding: 20px;
@@ -23,42 +17,75 @@ const StyledContainer = styled(Container)`
 
 const StyledCard = styled(Card)`
   border: none;
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0,0,0,.05);
-  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
   background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
   color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  margin-bottom: 20px;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
 `;
 
 const ChartContainer = styled.div`
-  height: 400px;
+  height: 300px;
   width: 100%;
+  @media (max-width: 768px) {
+    height: 200px;
+  }
 `;
 
 const StyledTable = styled(Table)`
   color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+  }
+`;
+
+const ResponsiveButton = styled(Button)`
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    margin: 0.2rem;
+  }
+`;
+
+const ResponsiveCol = styled(Col)`
+  @media (max-width: 768px) {
+    margin-bottom: 1rem;
+  }
+`;
+
+const ResponsiveForm = styled(Form)`
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
+`;
+
+const StyledModal = styled(Modal)`
+  .modal-content {
+    background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
+    color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  }
 `;
 
 const FinanciamentosPage = () => {
   const { isDarkMode } = useTheme();
   const [financiamentos, setFinanciamentos] = useState([]);
-  const [novoFinanciamento, setNovoFinanciamento] = useState({ 
-    descricao: '', 
-    valor_total: '', 
-    taxa_juros: '', 
-    parcelas_totais: '', 
-    data_inicio: '' 
+  const [newFinanciamento, setNewFinanciamento] = useState({
+    descricao: '',
+    valor_total: '',
+    taxa_juros: '',
+    parcelas_totais: '',
+    data_inicio: ''
   });
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingFinanciamento, setEditingFinanciamento] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
-  const [sortField, setSortField] = useState('');
-  const [sortDirection, setSortDirection] = useState('asc');
-  const [filter, setFilter] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingFinanciamentoId, setDeletingFinanciamentoId] = useState(null);
-  const [alert, setAlert] = useState({ show: false, variant: '', message: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [editedFinanciamento, setEditedFinanciamento] = useState({});
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsFinanciamento, setDetailsFinanciamento] = useState(null);
+  const [alert, setAlert] = useState({ show: false, message: '', variant: 'success' });
 
   useEffect(() => {
     fetchFinanciamentos();
@@ -73,136 +100,94 @@ const FinanciamentosPage = () => {
       setFinanciamentos(response.data);
     } catch (error) {
       console.error('Erro ao buscar financiamentos:', error);
+      showAlert('Erro ao buscar financiamentos', 'danger');
     }
   };
 
-  const handleNovoFinanciamentoChange = (e) => {
-    setNovoFinanciamento({ ...novoFinanciamento, [e.target.name]: e.target.value });
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setNewFinanciamento({ ...newFinanciamento, [name]: value });
   };
 
-  const adicionarFinanciamento = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/financiamentos', novoFinanciamento, {
+      await axios.post('http://localhost:5000/api/financiamentos', newFinanciamento, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNovoFinanciamento({ 
-        descricao: '', 
-        valor_total: '', 
-        taxa_juros: '', 
-        parcelas_totais: '', 
-        data_inicio: '' 
-      });
+      setNewFinanciamento({ descricao: '', valor_total: '', taxa_juros: '', parcelas_totais: '', data_inicio: '' });
       fetchFinanciamentos();
-      showAlert('success', 'Financiamento adicionado com sucesso');
+      showAlert('Financiamento adicionado com sucesso', 'success');
     } catch (error) {
       console.error('Erro ao adicionar financiamento:', error);
-      showAlert('danger', 'Erro ao adicionar financiamento');
+      showAlert('Falha ao adicionar financiamento', 'danger');
     }
   };
 
-  const editarFinanciamento = async () => {
+  const handleEdit = (financiamento) => {
+    setEditingId(financiamento._id);
+    setEditedFinanciamento(financiamento);
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+    setEditedFinanciamento({ ...editedFinanciamento, [name]: value });
+  };
+
+  const handleSaveEdit = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/financiamentos/${editingFinanciamento.id}`, editingFinanciamento, {
+      await axios.put(`http://localhost:5000/api/financiamentos/${editingId}`, editedFinanciamento, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setShowEditModal(false);
+      setEditingId(null);
       fetchFinanciamentos();
-      showAlert('success', 'Financiamento atualizado com sucesso');
+      showAlert('Financiamento atualizado com sucesso', 'success');
     } catch (error) {
       console.error('Erro ao editar financiamento:', error);
-      showAlert('danger', 'Erro ao editar financiamento');
+      showAlert('Falha ao atualizar financiamento', 'danger');
     }
   };
 
-  const confirmarDeletarFinanciamento = (id) => {
-    setDeletingFinanciamentoId(id);
-    setShowDeleteModal(true);
-  };
-
-  const deletarFinanciamento = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/financiamentos/${deletingFinanciamentoId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setShowDeleteModal(false);
-      fetchFinanciamentos();
-      showAlert('success', 'Financiamento deletado com sucesso');
-    } catch (error) {
-      console.error('Erro ao deletar financiamento:', error);
-      showAlert('danger', 'Erro ao deletar financiamento');
+  const handleDelete = async (id) => {
+    if (window.confirm('Tem certeza que deseja excluir este financiamento?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`http://localhost:5000/api/financiamentos/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchFinanciamentos();
+        showAlert('Financiamento excluído com sucesso', 'success');
+      } catch (error) {
+        console.error('Erro ao deletar financiamento:', error);
+        showAlert('Falha ao excluir financiamento', 'danger');
+      }
     }
   };
 
-  const showAlert = (variant, message) => {
-    setAlert({ show: true, variant, message });
-    setTimeout(() => setAlert({ show: false, variant: '', message: '' }), 3000);
+  const handleShowDetails = (financiamento) => {
+    setDetailsFinanciamento(financiamento);
+    setShowDetailsModal(true);
   };
 
-  const handleSort = (field) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
+  const showAlert = (message, variant) => {
+    setAlert({ show: true, message, variant });
+    setTimeout(() => setAlert({ show: false, message: '', variant: 'success' }), 3000);
   };
 
-  const sortedFinanciamentos = [...financiamentos].sort((a, b) => {
-    if (a[sortField] < b[sortField]) return sortDirection === 'asc' ? -1 : 1;
-    if (a[sortField] > b[sortField]) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  const filteredFinanciamentos = sortedFinanciamentos.filter(
-    (financiamento) =>
-      financiamento.descricao.toLowerCase().includes(filter.toLowerCase()) ||
-      financiamento.valor_total.toString().includes(filter)
-  );
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredFinanciamentos.slice(indexOfFirstItem, indexOfLastItem);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  const calcularValorParcela = (valorTotal, taxaJuros, parcelas) => {
-    const taxaMensal = taxaJuros / 100 / 12;
-    return (valorTotal * taxaMensal * Math.pow(1 + taxaMensal, parcelas)) / (Math.pow(1 + taxaMensal, parcelas) - 1);
-  };
-
-  const dadosGrafico = {
+  const chartData = {
     labels: financiamentos.map(f => f.descricao),
     datasets: [
       {
-        label: 'Valor Total',
+        label: 'Valor Total dos Financiamentos',
         data: financiamentos.map(f => f.valor_total),
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
       }
     ]
   };
 
-  const dadosGraficoPizza = {
-    labels: financiamentos.map(f => f.descricao),
-    datasets: [
-      {
-        data: financiamentos.map(f => f.valor_total),
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.8)',
-          'rgba(54, 162, 235, 0.8)',
-          'rgba(255, 206, 86, 0.8)',
-          'rgba(75, 192, 192, 0.8)',
-          'rgba(153, 102, 255, 0.8)',
-        ],
-      },
-    ],
-  };
-
-  const opcoesGrafico = {
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
@@ -226,25 +211,7 @@ const FinanciamentosPage = () => {
       },
       title: {
         display: true,
-        text: 'Visão Geral dos Financiamentos',
-        color: isDarkMode ? '#ffffff' : '#000000'
-      }
-    }
-  };
-
-  const opcoesGraficoPizza = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right',
-        labels: {
-          color: isDarkMode ? '#ffffff' : '#000000'
-        }
-      },
-      title: {
-        display: true,
-        text: 'Distribuição dos Financiamentos',
+        text: 'Valor Total dos Financiamentos',
         color: isDarkMode ? '#ffffff' : '#000000'
       }
     }
@@ -252,9 +219,9 @@ const FinanciamentosPage = () => {
 
   return (
     <Layout>
-      <StyledContainer>
+      <StyledContainer fluid>
         {alert.show && (
-          <Alert variant={alert.variant} onClose={() => setAlert({ show: false, variant: '', message: '' })} dismissible>
+          <Alert variant={alert.variant} onClose={() => setAlert({ ...alert, show: false })} dismissible>
             {alert.message}
           </Alert>
         )}
@@ -270,264 +237,250 @@ const FinanciamentosPage = () => {
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Novo Financiamento</Card.Title>
-                <Form onSubmit={adicionarFinanciamento}>
+                <ResponsiveForm onSubmit={handleSubmit}>
                   <Row>
-                    <Col md={6}>
+                    <ResponsiveCol xs={12} md={3}>
                       <Form.Group>
                         <Form.Label>Descrição</Form.Label>
-                        <Form.Control 
-                          type="text" 
+                        <Form.Control
+                          type="text"
                           name="descricao"
-                          value={novoFinanciamento.descricao}
-                          onChange={handleNovoFinanciamentoChange}
+                          value={newFinanciamento.descricao}
+                          onChange={handleInputChange}
                           required
                         />
                       </Form.Group>
-                    </Col>
-                    <Col md={6}>
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={2}>
                       <Form.Group>
                         <Form.Label>Valor Total</Form.Label>
-                        <Form.Control 
-                          type="number" 
+                        <Form.Control
+                          type="number"
                           name="valor_total"
-                          value={novoFinanciamento.valor_total}
-                          onChange={handleNovoFinanciamentoChange}
+                          value={newFinanciamento.valor_total}
+                          onChange={handleInputChange}
                           required
                         />
                       </Form.Group>
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col md={4}>
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={2}>
                       <Form.Group>
                         <Form.Label>Taxa de Juros (%)</Form.Label>
-                        <Form.Control 
-                          type="number" 
+                        <Form.Control
+                          type="number"
                           name="taxa_juros"
-                          value={novoFinanciamento.taxa_juros}
-                          onChange={handleNovoFinanciamentoChange}
+                          value={newFinanciamento.taxa_juros}
+                          onChange={handleInputChange}
                           required
                         />
                       </Form.Group>
-                    </Col>
-                    <Col md={4}>
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={2}>
                       <Form.Group>
                         <Form.Label>Parcelas Totais</Form.Label>
-                        <Form.Control 
-                          type="number" 
+                        <Form.Control
+                          type="number"
                           name="parcelas_totais"
-                          value={novoFinanciamento.parcelas_totais}
-                          onChange={handleNovoFinanciamentoChange}
+                          value={newFinanciamento.parcelas_totais}
+                          onChange={handleInputChange}
                           required
                         />
                       </Form.Group>
-                    </Col>
-                    <Col md={4}>
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={3}>
                       <Form.Group>
                         <Form.Label>Data de Início</Form.Label>
-                        <Form.Control 
-                          type="date" 
+                        <Form.Control
+                          type="date"
                           name="data_inicio"
-                          value={novoFinanciamento.data_inicio}
-                          onChange={handleNovoFinanciamentoChange}
+                          value={newFinanciamento.data_inicio}
+                          onChange={handleInputChange}
                           required
                         />
                       </Form.Group>
-                    </Col>
+                    </ResponsiveCol>
                   </Row>
-                  <Button variant="primary" type="submit" className="mt-3">
+                  <ResponsiveButton variant="primary" type="submit" className="mt-3">
                     <FontAwesomeIcon icon={faPlus} className="mr-2" />
                     Adicionar Financiamento
-                  </Button>
-                </Form>
+                  </ResponsiveButton>
+                </ResponsiveForm>
               </Card.Body>
             </StyledCard>
           </Col>
         </Row>
 
         <Row className="mb-4">
-          <Col md={6}>
+          <Col>
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
-                <Card.Title>Visão Geral dos Financiamentos</Card.Title>
+                <Card.Title>Visão Geral de Financiamentos</Card.Title>
                 <ChartContainer>
-                  <Line data={dadosGrafico} options={opcoesGrafico} />
-                </ChartContainer>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-          <Col md={6}>
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Distribuição dos Financiamentos</Card.Title>
-                <ChartContainer>
-                  <Pie data={dadosGraficoPizza} options={opcoesGraficoPizza} />
+                  <Bar data={chartData} options={chartOptions} />
                 </ChartContainer>
               </Card.Body>
             </StyledCard>
           </Col>
         </Row>
 
-        <StyledCard isDarkMode={isDarkMode}>
-          <Card.Body>
-            <Card.Title>Lista de Financiamentos</Card.Title>
-            <Row className="mb-3">
-              <Col md={6}>
-                <Form.Control
-                  type="text"
-                  placeholder="Filtrar financiamentos..."
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                />
-              </Col>
-              <Col md={6} className="text-right">
-                <CSVLink
-                  data={financiamentos}
-                  filename={"financiamentos.csv"}
-                  className="btn btn-primary"
-                >
-                  <FontAwesomeIcon icon={faFileExport} className="mr-2" />
-                  Exportar CSV
-                </CSVLink>
-              </Col>
-            </Row>
-            <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'} isDarkMode={isDarkMode}>
-  <thead>
-    <tr>
-      <th onClick={() => handleSort('descricao')}>Descrição</th>
-      <th onClick={() => handleSort('valor_total')}>Valor Total</th>
-      <th onClick={() => handleSort('taxa_juros')}>Taxa de Juros</th>
-      <th onClick={() => handleSort('parcelas_totais')}>Parcelas</th>
-      <th onClick={() => handleSort('data_inicio')}>Data de Início</th>
-      <th>Valor da Parcela</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-    {currentItems.map((financiamento) => (
-      <tr key={financiamento.id}>
-        <td>{financiamento.descricao}</td>
-        <td>R$ {parseFloat(financiamento.valor_total).toFixed(2)}</td>
-        <td>{financiamento.taxa_juros}%</td>
-        <td>{financiamento.parcelas_totais}</td>
-        <td>{new Date(financiamento.data_inicio).toLocaleDateString()}</td>
-        <td>
-          R$ {calcularValorParcela(
-            financiamento.valor_total,
-            financiamento.taxa_juros,
-            financiamento.parcelas_totais
-          ).toFixed(2)}
-        </td>
-        <td>
-          <Button 
-            variant="outline-primary" 
-            size="sm" 
-            className="mr-2"
-            onClick={() => {
-              setEditingFinanciamento(financiamento);
-              setShowEditModal(true);
-            }}
-          >
-            <FontAwesomeIcon icon={faEdit} />
-          </Button>
-          <Button 
-            variant="outline-danger" 
-            size="sm" 
-            onClick={() => confirmarDeletarFinanciamento(financiamento.id)}
-          >
-            <FontAwesomeIcon icon={faTrash} />
-          </Button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</StyledTable>
+        <Row>
+          <Col>
+            <StyledCard isDarkMode={isDarkMode}>
+              <Card.Body>
+                <Card.Title>Lista de Financiamentos</Card.Title>
+                <div className="table-responsive">
+                  <StyledTable striped bordered hover variant={isDarkMode ? 'dark' : 'light'}>
+                    <thead>
+                      <tr>
+                        <th>Descrição</th>
+                        <th>Valor Total</th>
+                        <th>Taxa de Juros</th>
+                        <th>Parcelas Totais</th>
+                        <th>Data de Início</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financiamentos.map((financiamento) => (
+                        <tr key={financiamento._id}>
+                          <td>
+                            {editingId === financiamento._id ? (
+                              <Form.Control
+                                type="text"
+                                name="descricao"
+                                value={editedFinanciamento.descricao}
+                                onChange={handleEditChange}
+                              />
+                            ) : (
+                              financiamento.descricao
+                            )}
+                          </td>
+                          <td>
+                            {editingId === financiamento._id ? (
+                              <Form.Control
+                                type="number"
+                                name="valor_total"
+                                value={editedFinanciamento.valor_total}
+                                onChange={handleEditChange}
+                              />
+                            ) : (
+                              `R$ ${financiamento.valor_total.toFixed(2)}`
+                            )}
+                          </td>
+                          <td>
+                            {editingId === financiamento._id ? (
+                              <Form.Control
+                                type="number"
+                                name="taxa_juros"
+                                value={editedFinanciamento.taxa_juros}
+                                onChange={handleEditChange}
+                              />
+                            ) : (
+                              `${financiamento.taxa_juros}%`
+                            )}
+                          </td>
+                          <td>
+                            {editingId === financiamento._id ? (
+                              <Form.Control
+                                type="number"
+                                name="parcelas_totais"
+                                value={editedFinanciamento.parcelas_totais}
+                                onChange={handleEditChange}
+                              />
+                            ) : (
+                              financiamento.parcelas_totais
+                            )}
+                          </td>
+                          <td>
+                            {editingId === financiamento._id ? (
+                              <Form.Control
+                                type="date"
+                                name="data_inicio"
+                                value={editedFinanciamento.data_inicio}
+                                onChange={handleEditChange}
+                              />
+                            ) : (
+                              new Date(financiamento.data_inicio).toLocaleDateString()
+                            )}
+                          </td>
+                          <td>
+                            {editingId === financiamento._id ? (
+                              <>
+                                <ResponsiveButton
+                                  variant="success"
+                                                                    size="sm"
+                                  onClick={handleSaveEdit}
+                                >
+                                  <FontAwesomeIcon icon={faCheck} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setEditingId(null)}
+                                  className="ml-2"
+                                >
+                                  <FontAwesomeIcon icon={faTimes} />
+                                </ResponsiveButton>
+                              </>
+                            ) : (
+                              <>
+                                <ResponsiveButton
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => handleEdit(financiamento)}
+                                >
+                                  <FontAwesomeIcon icon={faEdit} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleDelete(financiamento._id)}
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="outline-info"
+                                  size="sm"
+                                  onClick={() => handleShowDetails(financiamento)}
+                                >
+                                  <FontAwesomeIcon icon={faEye} />
+                                </ResponsiveButton>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </StyledTable>
+                </div>
+              </Card.Body>
+            </StyledCard>
+          </Col>
+        </Row>
 
-            <Pagination>
-              {[...Array(Math.ceil(filteredFinanciamentos.length / itemsPerPage)).keys()].map((number) => (
-                <Pagination.Item key={number + 1} active={number + 1 === currentPage} onClick={() => paginate(number + 1)}>
-                  {number + 1}
-                </Pagination.Item>
-              ))}
-            </Pagination>
-          </Card.Body>
-        </StyledCard>
+        <StyledModal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} isDarkMode={isDarkMode}>
+          <Modal.Header closeButton>
+            <Modal.Title>Detalhes do Financiamento</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {detailsFinanciamento && (
+              <>
+                <p><strong>Descrição:</strong> {detailsFinanciamento.descricao}</p>
+                <p><strong>Valor Total:</strong> R$ {detailsFinanciamento.valor_total.toFixed(2)}</p>
+                <p><strong>Taxa de Juros:</strong> {detailsFinanciamento.taxa_juros}%</p>
+                <p><strong>Parcelas Totais:</strong> {detailsFinanciamento.parcelas_totais}</p>
+                <p><strong>Data de Início:</strong> {new Date(detailsFinanciamento.data_inicio).toLocaleDateString()}</p>
+                <p><strong>ID:</strong> {detailsFinanciamento._id}</p>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+              Fechar
+            </Button>
+          </Modal.Footer>
+        </StyledModal>
       </StyledContainer>
-
-      <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Editar Financiamento</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group>
-              <Form.Label>Descrição</Form.Label>
-              <Form.Control 
-                type="text" 
-                value={editingFinanciamento?.descricao || ''}
-                onChange={(e) => setEditingFinanciamento({...editingFinanciamento, descricao: e.target.value})}
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Valor Total</Form.Label>
-              <Form.Control 
-                type="number" 
-                value={editingFinanciamento?.valor_total || ''}
-                onChange={(e) => setEditingFinanciamento({...editingFinanciamento, valor_total: e.target.value})}
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Taxa de Juros (%)</Form.Label>
-              <Form.Control 
-                type="number" 
-                value={editingFinanciamento?.taxa_juros || ''}
-                onChange={(e) => setEditingFinanciamento({...editingFinanciamento, taxa_juros: e.target.value})}
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Parcelas Totais</Form.Label>
-              <Form.Control 
-                type="number" 
-                value={editingFinanciamento?.parcelas_totais || ''}
-                onChange={(e) => setEditingFinanciamento({...editingFinanciamento, parcelas_totais: e.target.value})}
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Data de Início</Form.Label>
-              <Form.Control 
-                type="date" 
-                value={editingFinanciamento?.data_inicio || ''}
-                onChange={(e) => setEditingFinanciamento({...editingFinanciamento, data_inicio: e.target.value})}
-              />
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowEditModal(false)}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={editarFinanciamento}>
-            Salvar Alterações
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Confirmar Exclusão</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          Tem certeza que deseja excluir este financiamento?
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-            Cancelar
-          </Button>
-          <Button variant="danger" onClick={deletarFinanciamento}>
-            Confirmar Exclusão
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </Layout>
   );
 };

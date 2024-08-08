@@ -84,7 +84,7 @@ function LoginPage() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/usuarios/register', {
+      const response = await axios.post('http://localhost:5000/api/usuarios/register', {
         nome: registerName,
         email: registerEmail,
         senha: registerPassword
@@ -93,6 +93,8 @@ function LoginPage() {
       setAlertMessage('Registro bem-sucedido! Faça login para continuar.');
       setShowAlert(true);
       setShowRegisterModal(false);
+      setEmail(registerEmail);
+      setPassword(registerPassword);
     } catch (error) {
       setAlertVariant('danger');
       if (error.response && error.response.status === 400 && error.response.data.message.includes('já está em uso')) {

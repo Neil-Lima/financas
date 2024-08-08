@@ -22,6 +22,7 @@ import {
   faSort,
   faSortUp,
   faSortDown,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import styled from "styled-components";
 import {
@@ -108,11 +109,10 @@ const TransacoesPage = () => {
   const { isDarkMode } = useTheme();
   const [transacoes, setTransacoes] = useState([]);
   const [contas, setContas] = useState([]);
-  const [tiposContas, setTiposContas] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [newTransaction, setNewTransaction] = useState({
-    conta_id: "",
-    categoria_id: "",
+    conta: "",
+    categoria: "",
     descricao: "",
     valor: "",
     data: "",
@@ -130,12 +130,14 @@ const TransacoesPage = () => {
   const [sortField, setSortField] = useState("data");
   const [sortDirection, setSortDirection] = useState("desc");
   const [filter, setFilter] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsTransaction, setDetailsTransaction] = useState(null);
 
   useEffect(() => {
-    atualizarDadosUsuario();
     fetchTransacoes();
     fetchContas();
-    fetchTiposContas();
     fetchCategorias();
   }, []);
 
@@ -152,17 +154,6 @@ const TransacoesPage = () => {
     }
   };
 
-  const atualizarDadosUsuario = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.get('http://localhost:5000/api/usuarios/atualizar', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (error) {
-      console.error('Erro ao atualizar dados do usuário:', error);
-    }
-  };
-
   const fetchContas = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -173,19 +164,6 @@ const TransacoesPage = () => {
     } catch (error) {
       console.error("Erro ao buscar contas:", error);
       showAlertMessage("Erro ao buscar contas", "danger");
-    }
-  };
-
-  const fetchTiposContas = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/contas/tipos", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTiposContas(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar tipos de contas:", error);
-      showAlertMessage("Erro ao buscar tipos de contas", "danger");
     }
   };
 
@@ -211,18 +189,18 @@ const TransacoesPage = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      await axios.post("http://localhost:5000/api/transacoes", newTransaction, {
+      const response = await axios.post("http://localhost:5000/api/transacoes", newTransaction, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      setTransacoes([...transacoes, response.data]);
       setNewTransaction({
-        conta_id: "",
-        categoria_id: "",
+        conta: "",
+        categoria: "",
         descricao: "",
         valor: "",
         data: "",
         tipo: "",
       });
-      fetchTransacoes();
       showAlertMessage("Transação adicionada com sucesso", "success");
     } catch (error) {
       console.error("Erro ao adicionar transação:", error);
@@ -231,26 +209,27 @@ const TransacoesPage = () => {
   };
 
   const handleEdit = (transacao) => {
-    setEditingId(transacao.id);
+    setEditingId(transacao._id);
     setEditedTransaction(transacao);
   };
 
-  const handleEditChange = (e, field) => {
-    setEditedTransaction({ ...editedTransaction, [field]: e.target.value });
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditedTransaction((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSaveEdit = async () => {
     try {
       const token = localStorage.getItem("token");
-      await axios.put(
+      const response = await axios.put(
         `http://localhost:5000/api/transacoes/${editingId}`,
         editedTransaction,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      setTransacoes(transacoes.map(t => t._id === editingId ? response.data : t));
       setEditingId(null);
-      fetchTransacoes();
       showAlertMessage("Transação atualizada com sucesso", "success");
     } catch (error) {
       console.error("Erro ao editar transação:", error);
@@ -258,19 +237,23 @@ const TransacoesPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Tem certeza que deseja excluir esta transação?")) {
-      try {
-        const token = localStorage.getItem("token");
-        await axios.delete(`http://localhost:5000/api/transacoes/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        fetchTransacoes();
-        showAlertMessage("Transação excluída com sucesso", "success");
-      } catch (error) {
-        console.error("Erro ao deletar transação:", error);
-        showAlertMessage("Erro ao deletar transação", "danger");
-      }
+  const handleDeleteClick = (id) => {
+    setDeleteId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/transacoes/${deleteId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTransacoes(transacoes.filter(t => t._id !== deleteId));
+      setShowDeleteModal(false);
+      showAlertMessage("Transação excluída com sucesso", "success");
+    } catch (error) {
+      console.error("Erro ao deletar transação:", error);
+      showAlertMessage("Erro ao deletar transação", "danger");
     }
   };
 
@@ -281,14 +264,14 @@ const TransacoesPage = () => {
       formData.append("file", importFile);
       try {
         const token = localStorage.getItem("token");
-        await axios.post("http://localhost:5000/api/transacoes/import", formData, {
+        const response = await axios.post("http://localhost:5000/api/transacoes/import", formData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
           },
         });
+        setTransacoes([...transacoes, ...response.data]);
         setShowImportModal(false);
-        fetchTransacoes();
         showAlertMessage("Transações importadas com sucesso", "success");
       } catch (error) {
         console.error("Erro ao importar transações:", error);
@@ -320,8 +303,19 @@ const TransacoesPage = () => {
   );
 
   const sortedTransactions = filteredTransactions.sort((a, b) => {
-    if (a[sortField] < b[sortField]) return sortDirection === "asc" ? -1 : 1;
-    if (a[sortField] > b[sortField]) return sortDirection === "asc" ? 1 : -1;
+    let aValue = a[sortField];
+    let bValue = b[sortField];
+
+    if (sortField === 'categoria.nome') {
+      aValue = a.categoria?.nome || '';
+      bValue = b.categoria?.nome || '';
+    } else if (sortField === 'conta.nome') {
+      aValue = a.conta?.nome || '';
+      bValue = b.conta?.nome || '';
+    }
+
+    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
     return 0;
   });
 
@@ -377,6 +371,11 @@ const TransacoesPage = () => {
     },
   };
 
+  const handleShowDetails = (transacao) => {
+    setDetailsTransaction(transacao);
+    setShowDetailsModal(true);
+  };
+
   return (
     <Layout>
       <StyledContainer fluid>
@@ -409,15 +408,15 @@ const TransacoesPage = () => {
                         <Form.Label>Conta</Form.Label>
                         <Form.Control
                           as="select"
-                          name="conta_id"
-                          value={newTransaction.conta_id}
+                          name="conta"
+                          value={newTransaction.conta}
                           onChange={handleInputChange}
                           required
                         >
                           <option value="">Selecione uma conta</option>
-                          {contas && contas.length > 0 && contas.map((conta) => (
-                            <option key={conta.id} value={conta.id}>
-                              {conta.nome} ({conta.tipo})
+                          {contas.map((conta) => (
+                            <option key={conta._id} value={conta._id}>
+                              {conta.nome}
                             </option>
                           ))}
                         </Form.Control>
@@ -428,17 +427,17 @@ const TransacoesPage = () => {
                         <Form.Label>Categoria</Form.Label>
                         <Form.Control
                           as="select"
-                          name="categoria_id"
-                          value={newTransaction.categoria_id}
+                          name="categoria"
+                          value={newTransaction.categoria}
                           onChange={handleInputChange}
                           required
                         >
                           <option value="">Selecione uma categoria</option>
-                          {categorias && categorias.length > 0 && categorias.map((categoria) => (
-                            <option key={categoria.id} value={categoria.id}>
+                          {categorias.map((categoria) => (
+                            <option key={categoria._id} value={categoria._id}>
                               {categoria.nome}
                             </option>
-                          ))}
+                                                   ))}
                         </Form.Control>
                       </Form.Group>
                     </Col>
@@ -558,19 +557,19 @@ const TransacoesPage = () => {
                             } 
                           />
                         </th>
-                        <th onClick={() => handleSort('categoria_id')}>
+                        <th onClick={() => handleSort('categoria.nome')}>
                           Categoria
                           <SortIcon 
-                            icon={sortField === 'categoria_id' 
+                            icon={sortField === 'categoria.nome' 
                               ? (sortDirection === 'asc' ? faSortUp : faSortDown) 
                               : faSort
                             } 
                           />
                         </th>
-                        <th onClick={() => handleSort('conta_id')}>
+                        <th onClick={() => handleSort('conta.nome')}>
                           Conta
                           <SortIcon 
-                            icon={sortField === 'conta_id' 
+                            icon={sortField === 'conta.nome' 
                               ? (sortDirection === 'asc' ? faSortUp : faSortDown) 
                               : faSort
                             } 
@@ -590,72 +589,65 @@ const TransacoesPage = () => {
                     </thead>
                     <tbody>
                       {currentItems.map((transacao) => (
-                        <tr key={transacao.id}>
+                        <tr key={transacao._id}>
                           <td>
-                            {editingId === transacao.id ? (
+                            {editingId === transacao._id ? (
                               <Form.Control
                                 type="date"
+                                name="data"
                                 value={editedTransaction.data}
-                                onChange={(e) => handleEditChange(e, "data")}
+                                onChange={handleEditChange}
                               />
                             ) : (
                               new Date(transacao.data).toLocaleDateString()
                             )}
                           </td>
                           <td>
-                            {editingId === transacao.id ? (
+                            {editingId === transacao._id ? (
                               <Form.Control
                                 type="text"
+                                name="descricao"
                                 value={editedTransaction.descricao}
-                                onChange={(e) =>
-                                  handleEditChange(e, "descricao")
-                                }
+                                onChange={handleEditChange}
                               />
                             ) : (
                               transacao.descricao
                             )}
                           </td>
                           <td>
-                            {editingId === transacao.id ? (
+                            {editingId === transacao._id ? (
                               <Form.Control
                                 as="select"
-                                value={editedTransaction.categoria_id}
-                                onChange={(e) =>
-                                  handleEditChange(e, "categoria_id")
-                                }
+                                name="categoria"
+                                value={editedTransaction.categoria}
+                                onChange={handleEditChange}
                               >
                                 {categorias.map((categoria) => (
-                                  <option
-                                    key={categoria.id}
-                                    value={categoria.id}
-                                  >
+                                  <option key={categoria._id} value={categoria._id}>
                                     {categoria.nome}
                                   </option>
                                 ))}
                               </Form.Control>
                             ) : (
-                              categorias.find(
-                                (cat) => cat.id === transacao.categoria_id
-                              )?.nome
+                              transacao.categoria?.nome || 'N/A'
                             )}
                           </td>
                           <td>
-                            {editingId === transacao.id ? (
+                            {editingId === transacao._id ? (
                               <Form.Control
                                 as="select"
-                                value={editedTransaction.conta_id}
-                                onChange={(e) =>
-                                  handleEditChange(e, "conta_id")
-                                }
+                                name="conta"
+                                value={editedTransaction.conta}
+                                onChange={handleEditChange}
                               >
                                 {contas.map((conta) => (
-                                  <option key={conta.id} value={conta.id}>
-                                    {conta.nome} ({conta.tipo})
+                                  <option key={conta._id} value={conta._id}>
+                                    {conta.nome}
                                   </option>
                                 ))}
                               </Form.Control>
                             ) : (
-                              `${contas.find((conta) => conta.id === transacao.conta_id)?.nome} (${contas.find((conta) => conta.id === transacao.conta_id)?.tipo})`
+                              transacao.conta?.nome || 'N/A'
                             )}
                           </td>
                           <td
@@ -665,18 +657,19 @@ const TransacoesPage = () => {
                                 : "text-danger"
                             }
                           >
-                            {editingId === transacao.id ? (
+                            {editingId === transacao._id ? (
                               <Form.Control
                                 type="number"
+                                name="valor"
                                 value={editedTransaction.valor}
-                                onChange={(e) => handleEditChange(e, "valor")}
+                                onChange={handleEditChange}
                               />
                             ) : (
                               `R$ ${Math.abs(transacao.valor).toFixed(2)}`
                             )}
                           </td>
                           <td>
-                            {editingId === transacao.id ? (
+                            {editingId === transacao._id ? (
                               <>
                                 <ResponsiveButton
                                   variant="success"
@@ -707,9 +700,16 @@ const TransacoesPage = () => {
                                 <ResponsiveButton
                                   variant="outline-danger"
                                   size="sm"
-                                  onClick={() => handleDelete(transacao.id)}
+                                  onClick={() => handleDeleteClick(transacao._id)}
                                 >
                                   <FontAwesomeIcon icon={faTrash} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="outline-info"
+                                  size="sm"
+                                  onClick={() => handleShowDetails(transacao)}
+                                >
+                                  <FontAwesomeIcon icon={faEye} />
                                 </ResponsiveButton>
                               </>
                             )}
@@ -754,6 +754,46 @@ const TransacoesPage = () => {
               </ResponsiveButton>
             </Form>
           </Modal.Body>
+        </StyledModal>
+
+        <StyledModal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} isDarkMode={isDarkMode}>
+          <Modal.Header closeButton>
+            <Modal.Title>Confirmar Exclusão</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            Tem certeza que deseja excluir esta transação?
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Excluir
+            </Button>
+          </Modal.Footer>
+        </StyledModal>
+
+        <StyledModal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} isDarkMode={isDarkMode}>
+          <Modal.Header closeButton>
+            <Modal.Title>Detalhes da Transação</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {detailsTransaction && (
+              <>
+                <p><strong>Descrição:</strong> {detailsTransaction.descricao}</p>
+                <p><strong>Valor:</strong> R$ {Math.abs(detailsTransaction.valor).toFixed(2)}</p>
+                <p><strong>Tipo:</strong> {detailsTransaction.tipo}</p>
+                <p><strong>Data:</strong> {new Date(detailsTransaction.data).toLocaleDateString()}</p>
+                <p><strong>Categoria:</strong> {detailsTransaction.categoria?.nome || 'N/A'}</p>
+                <p><strong>Conta:</strong> {detailsTransaction.conta?.nome || 'N/A'}</p>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+              Fechar
+            </Button>
+          </Modal.Footer>
         </StyledModal>
       </StyledContainer>
     </Layout>

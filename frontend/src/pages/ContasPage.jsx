@@ -1,21 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Form, Table, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Table, Modal, Alert } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faPlus,
-  faEdit,
-  faTrash,
-  faCheck,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
 import Layout from '../layout/Layout';
 import axios from 'axios';
 import { useTheme } from '../context/ThemeContext';
-
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
 const StyledContainer = styled(Container)`
   padding: 20px;
@@ -26,7 +16,7 @@ const StyledCard = styled(Card)`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   background-color: ${props => props.isDarkMode ? '#2c2c2c' : '#ffffff'};
-  color: ${props => props.isDarkMode ? '#ffffff' : '#333333'};
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
   margin-bottom: 20px;
 
   &:hover {
@@ -35,16 +25,20 @@ const StyledCard = styled(Card)`
   }
 `;
 
-const ChartContainer = styled.div`
-  height: 300px;
-  width: 100%;
+const StyledTable = styled(Table)`
+  color: ${props => props.isDarkMode ? '#ffffff' : '#000000'};
+  
   @media (max-width: 768px) {
-    height: 200px;
+    font-size: 0.8rem;
   }
 `;
 
-const StyledTable = styled(Table)`
-  color: ${props => props.isDarkMode ? '#ffffff' : '#333333'};
+const ResponsiveButton = styled(Button)`
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    margin: 0.2rem;
+  }
 `;
 
 const StyledModal = styled(Modal)`
@@ -54,27 +48,27 @@ const StyledModal = styled(Modal)`
   }
 `;
 
-const ResponsiveButton = styled(Button)`
+const ResponsiveCol = styled(Col)`
   @media (max-width: 768px) {
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
+    margin-bottom: 1rem;
+  }
+`;
+
+const ResponsiveForm = styled(Form)`
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
   }
 `;
 
 const ContasPage = () => {
   const { isDarkMode } = useTheme();
   const [contas, setContas] = useState([]);
-  const [newConta, setNewConta] = useState({
-    nome: '',
-    tipo: '',
-    saldo: '',
-    instituicao: '',
-    numero: ''
-  });
+  const [newConta, setNewConta] = useState({ nome: '', saldo: '', tipo: '', data: '' });
   const [editingId, setEditingId] = useState(null);
   const [editedConta, setEditedConta] = useState({});
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsConta, setDetailsConta] = useState(null);
+  const [alert, setAlert] = useState({ show: false, message: '', variant: 'success' });
 
   useEffect(() => {
     fetchContas();
@@ -89,12 +83,13 @@ const ContasPage = () => {
       setContas(response.data);
     } catch (error) {
       console.error('Erro ao buscar contas:', error);
+      showAlert('Erro ao buscar contas', 'danger');
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewConta(prev => ({ ...prev, [name]: value }));
+    setNewConta({ ...newConta, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -104,16 +99,12 @@ const ContasPage = () => {
       await axios.post('http://localhost:5000/api/contas', newConta, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNewConta({
-        nome: '',
-        tipo: '',
-        saldo: '',
-        instituicao: '',
-        numero: ''
-      });
+      setNewConta({ nome: '', saldo: '', tipo: '', data: '' });
       fetchContas();
+      showAlert('Conta adicionada com sucesso', 'success');
     } catch (error) {
       console.error('Erro ao adicionar conta:', error);
+      showAlert('Falha ao adicionar conta', 'danger');
     }
   };
 
@@ -124,78 +115,59 @@ const ContasPage = () => {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setEditedConta(prev => ({ ...prev, [name]: value }));
+    setEditedConta({ ...editedConta, [name]: value });
   };
 
   const handleSaveEdit = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:5000/api/contas/${editingId}`, editedConta, {
+      await axios.put(`http://localhost:5000/api/contas/${editingId}`, editedConta, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEditingId(null);
       fetchContas();
+      showAlert('Conta atualizada com sucesso', 'success');
     } catch (error) {
       console.error('Erro ao editar conta:', error);
+      showAlert('Falha ao atualizar conta', 'danger');
     }
   };
 
-  const handleDeleteClick = (id) => {
-    setDeleteId(id);
-    setShowDeleteModal(true);
-  };
-
-  const handleDelete = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/contas/${deleteId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setShowDeleteModal(false);
-      fetchContas();
-    } catch (error) {
-      console.error('Erro ao deletar conta:', error);
+  const handleDelete = async (id) => {
+    if (window.confirm('Tem certeza que deseja excluir esta conta?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`http://localhost:5000/api/contas/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchContas();
+        showAlert('Conta excluída com sucesso', 'success');
+      } catch (error) {
+        console.error('Erro ao deletar conta:', error);
+        showAlert('Falha ao excluir conta', 'danger');
+      }
     }
   };
 
-  const pieChartData = {
-    labels: contas.map(conta => conta.nome),
-    datasets: [
-      {
-        data: contas.map(conta => conta.saldo),
-        backgroundColor: [
-          '#FF6384',
-          '#36A2EB',
-          '#FFCE56',
-          '#4BC0C0',
-          '#9966FF',
-          '#FF9F40'
-        ],
-      },
-    ],
+  const handleShowDetails = (conta) => {
+    setDetailsConta(conta);
+    setShowDetailsModal(true);
   };
 
-  const barChartData = {
-    labels: ['Conta Corrente', 'Conta Poupança', 'Cartão de Crédito', 'Investimento', 'Dinheiro', 'Outros'],
-    datasets: [
-      {
-        label: 'Saldo Total por Tipo de Conta',
-        data: ['Conta Corrente', 'Conta Poupança', 'Cartão de Crédito', 'Investimento', 'Dinheiro', 'Outros'].map(tipo =>
-          contas.filter(conta => conta.tipo === tipo).reduce((acc, conta) => acc + parseFloat(conta.saldo), 0)
-        ),
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
+  const showAlert = (message, variant) => {
+    setAlert({ show: true, message, variant });
+    setTimeout(() => setAlert({ show: false, message: '', variant: 'success' }), 3000);
   };
 
   return (
     <Layout>
       <StyledContainer fluid>
+        {alert.show && (
+          <Alert variant={alert.variant} onClose={() => setAlert({ ...alert, show: false })} dismissible>
+            {alert.message}
+          </Alert>
+        )}
+
         <Row className="mb-4">
           <Col>
             <h2>Contas</h2>
@@ -207,105 +179,67 @@ const ContasPage = () => {
             <StyledCard isDarkMode={isDarkMode}>
               <Card.Body>
                 <Card.Title>Nova Conta</Card.Title>
-                <Form onSubmit={handleSubmit}>
+                <ResponsiveForm onSubmit={handleSubmit}>
                   <Row>
-                    <Col xs={12} md={6} lg={3} className="mb-3">
+                    <ResponsiveCol xs={12} md={3}>
                       <Form.Group>
                         <Form.Label>Nome</Form.Label>
-                        <Form.Control 
-                          type="text" 
+                        <Form.Control
+                          type="text"
                           name="nome"
                           value={newConta.nome}
                           onChange={handleInputChange}
-                          required 
+                          required
                         />
                       </Form.Group>
-                    </Col>
-                    <Col xs={12} md={6} lg={3} className="mb-3">
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={3}>
+                      <Form.Group>
+                        <Form.Label>Saldo</Form.Label>
+                        <Form.Control
+                          type="number"
+                          name="saldo"
+                          value={newConta.saldo}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </Form.Group>
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={3}>
                       <Form.Group>
                         <Form.Label>Tipo</Form.Label>
-                        <Form.Control 
+                        <Form.Control
                           as="select"
                           name="tipo"
                           value={newConta.tipo}
                           onChange={handleInputChange}
                           required
                         >
-                          <option value="">Selecione um tipo</option>
-                          <option value="Conta Corrente">Conta Corrente</option>
-                          <option value="Conta Poupança">Conta Poupança</option>
-                          <option value="Cartão de Crédito">Cartão de Crédito</option>
-                          <option value="Investimento">Investimento</option>
-                          <option value="Dinheiro">Dinheiro</option>
-                          <option value="Outros">Outros</option>
+                          <option value="">Selecione o tipo</option>
+                          <option value="corrente">Corrente</option>
+                          <option value="poupança">Poupança</option>
+                          <option value="investimento">Investimento</option>
                         </Form.Control>
                       </Form.Group>
-                    </Col>
-                    <Col xs={12} md={6} lg={3} className="mb-3">
+                    </ResponsiveCol>
+                    <ResponsiveCol xs={12} md={3}>
                       <Form.Group>
-                        <Form.Label>Saldo</Form.Label>
-                        <Form.Control 
-                          type="number" 
-                          name="saldo"
-                          value={newConta.saldo}
+                        <Form.Label>Data</Form.Label>
+                        <Form.Control
+                          type="date"
+                          name="data"
+                          value={newConta.data}
                           onChange={handleInputChange}
-                          required 
+                          required
                         />
                       </Form.Group>
-                    </Col>
-                    <Col xs={12} md={6} lg={3} className="mb-3">
-                      <Form.Group>
-                        <Form.Label>Instituição</Form.Label>
-                        <Form.Control 
-                          type="text" 
-                          name="instituicao"
-                          value={newConta.instituicao}
-                          onChange={handleInputChange}
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col xs={12} md={6} lg={3} className="mb-3">
-                      <Form.Group>
-                        <Form.Label>Número</Form.Label>
-                        <Form.Control 
-                          type="text" 
-                          name="numero"
-                          value={newConta.numero}
-                          onChange={handleInputChange}
-                        />
-                      </Form.Group>
-                    </Col>
+                    </ResponsiveCol>
                   </Row>
                   <ResponsiveButton variant="primary" type="submit" className="mt-3">
                     <FontAwesomeIcon icon={faPlus} className="mr-2" />
                     Adicionar Conta
                   </ResponsiveButton>
-                </Form>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-        </Row>
-
-        <Row className="mb-4">
-          <Col xs={12} lg={6} className="mb-4 mb-lg-0">
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Distribuição de Saldos</Card.Title>
-                <ChartContainer>
-                  <Pie data={pieChartData} options={chartOptions} />
-                </ChartContainer>
-              </Card.Body>
-            </StyledCard>
-          </Col>
-          <Col xs={12} lg={6}>
-            <StyledCard isDarkMode={isDarkMode}>
-              <Card.Body>
-                <Card.Title>Saldo por Tipo de Conta</Card.Title>
-                <ChartContainer>
-                  <Bar data={barChartData} options={chartOptions} />
-                </ChartContainer>
+                </ResponsiveForm>
               </Card.Body>
             </StyledCard>
           </Col>
@@ -321,10 +255,9 @@ const ContasPage = () => {
                     <thead>
                       <tr>
                         <th>Nome</th>
-                        <th>Tipo</th>
                         <th>Saldo</th>
-                        <th>Instituição</th>
-                        <th>Número</th>
+                        <th>Tipo</th>
+                        <th>Data</th>
                         <th>Ações</th>
                       </tr>
                     </thead>
@@ -346,17 +279,26 @@ const ContasPage = () => {
                           <td>
                             {editingId === conta._id ? (
                               <Form.Control
+                                type="number"
+                                name="saldo"
+                                value={editedConta.saldo}
+                                onChange={handleEditChange}
+                              />
+                            ) : (
+                              `R$ ${conta.saldo.toFixed(2)}`
+                            )}
+                          </td>
+                          <td>
+                            {editingId === conta._id ? (
+                              <Form.Control
                                 as="select"
                                 name="tipo"
                                 value={editedConta.tipo}
                                 onChange={handleEditChange}
                               >
-                                <option value="Conta Corrente">Conta Corrente</option>
-                                <option value="Conta Poupança">Conta Poupança</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                <option value="Investimento">Investimento</option>
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="Outros">Outros</option>
+                                <option value="corrente">Corrente</option>
+                                <option value="poupança">Poupança</option>
+                                <option value="investimento">Investimento</option>
                               </Form.Control>
                             ) : (
                               conta.tipo
@@ -365,56 +307,58 @@ const ContasPage = () => {
                           <td>
                             {editingId === conta._id ? (
                               <Form.Control
-                                type="number"
-                                name="saldo"
-                                value={editedConta.saldo}
+                                type="date"
+                                name="data"
+                                value={editedConta.data}
                                 onChange={handleEditChange}
                               />
                             ) : (
-                              `R$ ${parseFloat(conta.saldo).toFixed(2)}`
-                            )}
-                          </td>
-                          <td>
-                            {editingId === conta._id ? (
-                              <Form.Control
-                                type="text"
-                                name="instituicao"
-                                value={editedConta.instituicao}
-                                onChange={handleEditChange}
-                              />
-                            ) : (
-                              conta.instituicao
-                            )}
-                          </td>
-                          <td>
-                            {editingId === conta._id ? (
-                              <Form.Control
-                                type="text"
-                                name="numero"
-                                value={editedConta.numero}
-                                onChange={handleEditChange}
-                              />
-                            ) : (
-                              conta.numero
+                              new Date(conta.data).toLocaleDateString()
                             )}
                           </td>
                           <td>
                             {editingId === conta._id ? (
                               <>
-                                <ResponsiveButton variant="success" size="sm" onClick={handleSaveEdit}>
+                                <ResponsiveButton
+                                  variant="success"
+                                  size="sm"
+                                  onClick={handleSaveEdit}
+                                >
                                   <FontAwesomeIcon icon={faCheck} />
                                 </ResponsiveButton>
-                                <ResponsiveButton variant="secondary" size="sm" onClick={() => setEditingId(null)}>
+                                <ResponsiveButton
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setEditingId(null)}
+                                  className="ml-2"
+                                >
                                   <FontAwesomeIcon icon={faTimes} />
                                 </ResponsiveButton>
                               </>
                             ) : (
                               <>
-                                <ResponsiveButton variant="outline-primary" size="sm" className="mr-2" onClick={() => handleEdit(conta)}>
+                                <ResponsiveButton
+                                  variant="outline-primary"
+                                  size="sm"
+                                  className="mr-2"
+                                  onClick={() => handleEdit(conta)}
+                                >
                                   <FontAwesomeIcon icon={faEdit} />
                                 </ResponsiveButton>
-                                <ResponsiveButton variant="outline-danger" size="sm" onClick={() => handleDeleteClick(conta._id)}>
+                                <ResponsiveButton
+                                  variant="outline-danger"
+                                  size="sm"
+                                  className="mr-2"
+                                  onClick={() => handleDelete(conta._id)}
+                                >
                                   <FontAwesomeIcon icon={faTrash} />
+                                </ResponsiveButton>
+                                <ResponsiveButton
+                                  variant="outline-info"
+                                  size="sm"
+                                  onClick={() => handleShowDetails(conta)}
+                                >
+                                  <FontAwesomeIcon icon={faEye} />
                                 </ResponsiveButton>
                               </>
                             )}
@@ -429,18 +373,27 @@ const ContasPage = () => {
           </Col>
         </Row>
 
-        <StyledModal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} isDarkMode={isDarkMode}>
+        <StyledModal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} isDarkMode={isDarkMode}>
           <Modal.Header closeButton>
-            <Modal.Title>Confirmar Exclusão</Modal.Title>
+            <Modal.Title>Detalhes da Conta</Modal.Title>
           </Modal.Header>
-          <Modal.Body>Tem certeza que deseja excluir esta conta?</Modal.Body>
+          <Modal.Body>
+            {detailsConta && (
+              <>
+                <p><strong>Nome:</strong> {detailsConta.nome}</p>
+                <p><strong>Saldo:</strong> R$ {detailsConta.saldo.toFixed(2)}</p>
+                <p><strong>Tipo:</strong> {detailsConta.tipo}</p>
+                <p><strong>Data:</strong> {new Date(detailsConta.data).toLocaleDateString()}</p>
+                <p><strong>ID:</strong> {detailsConta._id}</p>
+                <p><strong>Data de Criação:</strong> {new Date(detailsConta.createdAt).toLocaleString()}</p>
+                <p><strong>Última Atualização:</strong> {new Date(detailsConta.updatedAt).toLocaleString()}</p>
+              </>
+            )}
+          </Modal.Body>
           <Modal.Footer>
-            <ResponsiveButton variant="secondary" onClick={() => setShowDeleteModal(false)}>
-              Cancelar
-            </ResponsiveButton>
-            <ResponsiveButton variant="danger" onClick={handleDelete}>
-              Excluir
-            </ResponsiveButton>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+              Fechar
+            </Button>
           </Modal.Footer>
         </StyledModal>
       </StyledContainer>
@@ -449,4 +402,3 @@ const ContasPage = () => {
 };
 
 export default ContasPage;
-
